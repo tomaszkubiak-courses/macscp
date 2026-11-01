@@ -1,0 +1,5 @@
+module CSSH [system] {
+  header "cssh.h"
+  link "ssh"
+  export *
+}

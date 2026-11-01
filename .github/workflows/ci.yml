@@ -1,0 +1,92 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache CSSH.xcframework
+        id: cssh
+        uses: actions/cache@v4
+        with:
+          path: Frameworks/CSSH.xcframework
+          key: cssh-${{ runner.os }}-xcode-latest-${{ hashFiles('scripts/build-cssh.sh') }}
+      - name: Select newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Install tools
+        run: brew install ninja dropbear xcodegen
+      - name: Build CSSH.xcframework
+        if: steps.cssh.outputs.cache-hit != 'true'
+        run: scripts/build-cssh.sh
+      - name: Build
+        run: swift build --build-tests
+      - name: Unit and integration tests (OpenSSH + Dropbear, key and agent auth)
+        timeout-minutes: 20
+        run: |
+          scripts/test-servers.sh start
+          MACSCP_INTEGRATION=1 swift test
+          scripts/test-servers.sh stop
+      - name: Build app (Release, universal)
+        run: |
+          xcodegen
+          xcodebuild -project MacSCP.xcodeproj -scheme MacSCP -configuration Release -derivedDataPath DerivedData \
+            -destination "generic/platform=macOS" ARCHS="arm64 x86_64" build > build.log || { grep -E 'error:' build.log | sort -u | head -40; exit 1; }
+          lipo -archs DerivedData/Build/Products/Release/MacSCP.app/Contents/MacOS/MacSCP
+      - name: SFTP throughput gate (libssh vs sftp, 256 MiB on localhost)
+        run: scripts/bench-sftp.sh 256
+
+  linux:
+    runs-on: ubuntu-24.04
+    container:
+      image: swift:6.2-noble
+      options: --cap-add=SYS_PTRACE
+    env:
+      MACSCP_INTEGRATION: "1"
+      MACSCP_TEST_USER: macscp
+      MACSCP_TEST_PASSWORD: Test-pass-1
+      MACSCP_TEST_KEYS: /keys
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packages
+        run: |
+          apt-get update -q
+          DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
+            cmake ninja-build libssl-dev zlib1g-dev curl xz-utils ca-certificates \
+            openssh-server openssh-client dropbear-bin netcat-openbsd gdb
+      - name: Build libssh
+        run: scripts/build-cssh.sh
+      - name: Start servers
+        run: scripts/ci-linux-servers.sh
+      - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods)
+        timeout-minutes: 20
+        run: scripts/ci-run-tests.sh
+
+  servers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start servers
+        env:
+          MACSCP_TEST_PASSWORD: Test-pass-1
+        run: scripts/ci-server-matrix.sh
+      - name: Integration tests (BusyBox, OpenSSH 7.4, ProFTPD)
+        timeout-minutes: 25
+        run: |
+          docker run --rm --network host --cap-add=SYS_PTRACE -v "$PWD:/src" -v /tmp/keys:/keys -w /src \
+            -e MACSCP_INTEGRATION=1 -e MACSCP_TEST_USER=macscp -e MACSCP_TEST_PASSWORD=Test-pass-1 -e MACSCP_TEST_KEYS=/keys \
+            -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp \
+            swift:6.2-noble bash -c '
+              apt-get update -q >/dev/null &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build libssl-dev \
+                zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
+              scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
+      - name: Server logs
+        if: failure()
+        run: for c in busybox openssh74 proftpd; do echo "== $c"; docker logs --tail 40 $c; done
+

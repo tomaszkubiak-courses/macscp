@@ -1,0 +1,599 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%@ (%lld B)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$lld B)"
+          }
+        }
+      }
+    },
+    "%@ and %lld more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$lld more"
+          }
+        }
+      }
+    },
+    "%@ is not a folder." : {
+
+    },
+    "%@ of %@ in %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ in %3$lld of %4$lld"
+          }
+        }
+      }
+    },
+    "%lld files, %lld folders" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld files, %2$lld folders"
+          }
+        }
+      }
+    },
+    "%lld items" : {
+
+    },
+    "%lld transfers in progress" : {
+
+    },
+    "*.txt; *.log | *.bak; .git/" : {
+
+    },
+    "22" : {
+
+    },
+    "Abort" : {
+
+    },
+    "About MacSCP" : {
+
+    },
+    "Accept" : {
+
+    },
+    "Add X to directories" : {
+
+    },
+    "Advanced" : {
+
+    },
+    "Agent and default keys" : {
+
+    },
+    "Always" : {
+
+    },
+    "Applies to sessions opened after the change." : {
+
+    },
+    "Apply to all remaining files" : {
+
+    },
+    "Ask before overwriting files" : {
+
+    },
+    "Back" : {
+
+    },
+    "Bring All to Front" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancelled" : {
+
+    },
+    "Choose an editor" : {
+
+    },
+    "Choose…" : {
+
+    },
+    "Clear Finished" : {
+
+    },
+    "Close" : {
+
+    },
+    "Closing the session cancels them." : {
+
+    },
+    "Commander keys (F2 rename, F4 edit, F5 copy, F7 new folder, F8 delete)" : {
+
+    },
+    "Common" : {
+
+    },
+    "Completed" : {
+
+    },
+    "Confirm before deleting" : {
+
+    },
+    "Connect Once" : {
+
+    },
+    "Connected" : {
+
+    },
+    "Continue connecting to an unknown server?" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy to Other Pane…" : {
+
+    },
+    "Create" : {
+
+    },
+    "Cut" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@?" : {
+
+    },
+    "Destination" : {
+
+    },
+    "Double-click to type a path" : {
+
+    },
+    "Download %lld items to local folder:" : {
+
+    },
+    "Download “%@” to local folder:" : {
+
+    },
+    "Download…" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit With…" : {
+
+    },
+    "Enclosing Folder" : {
+
+    },
+    "Enter Full Screen" : {
+
+    },
+    "Enter a host name." : {
+
+    },
+    "Exclude hidden files" : {
+
+    },
+    "Failed: %@" : {
+
+    },
+    "File mask" : {
+
+    },
+    "File protocol" : {
+
+    },
+    "Files" : {
+
+    },
+    "Files over 100 KB" : {
+
+    },
+    "Folder" : {
+
+    },
+    "Forward" : {
+
+    },
+    "From ~/.ssh/config or local user" : {
+
+    },
+    "General" : {
+
+    },
+    "Get Info" : {
+
+    },
+    "Go" : {
+
+    },
+    "Go to Folder…" : {
+
+    },
+    "Go to folder" : {
+
+    },
+    "Group" : {
+
+    },
+    "Help" : {
+
+    },
+    "Hide MacSCP" : {
+
+    },
+    "Hide Others" : {
+
+    },
+    "Home" : {
+
+    },
+    "Host name" : {
+
+    },
+    "Ignore permission errors" : {
+
+    },
+    "Jump hosts, proxies and other options come from ~/.ssh/config." : {
+
+    },
+    "Local directory" : {
+
+    },
+    "Location" : {
+
+    },
+    "Login" : {
+
+    },
+    "Minimize" : {
+
+    },
+    "Modified" : {
+
+    },
+    "Move %@ to the Trash?" : {
+
+    },
+    "Move to Trash" : {
+
+    },
+    "Move to Trash / Delete" : {
+
+    },
+    "Name" : {
+
+    },
+    "Never" : {
+
+    },
+    "New Folder…" : {
+
+    },
+    "New Session…" : {
+
+    },
+    "New Site" : {
+
+    },
+    "New and updated files only" : {
+
+    },
+    "New folder" : {
+
+    },
+    "New: %@\nExisting: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New: %1$@\nExisting: %2$@"
+          }
+        }
+      }
+    },
+    "OK" : {
+
+    },
+    "Octal" : {
+
+    },
+    "Only overwrite with newer files" : {
+
+    },
+    "Open" : {
+
+    },
+    "Open in Terminal" : {
+
+    },
+    "Operation failed" : {
+
+    },
+    "Optional" : {
+
+    },
+    "Other" : {
+
+    },
+    "Overwrite" : {
+
+    },
+    "Owner" : {
+
+    },
+    "Parallel transfers: %lld" : {
+
+    },
+    "Passphrase for key %@" : {
+
+    },
+    "Password" : {
+
+    },
+    "Password for %@@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Password for %1$@@%2$@"
+          }
+        }
+      }
+    },
+    "Paste" : {
+
+    },
+    "Permissions" : {
+
+    },
+    "Permissions (differ across selection)" : {
+
+    },
+    "Port" : {
+
+    },
+    "Preserve timestamp" : {
+
+    },
+    "Private key" : {
+
+    },
+    "Progress" : {
+
+    },
+    "Queue (%lld)" : {
+
+    },
+    "Quick Look" : {
+
+    },
+    "Quit Anyway" : {
+
+    },
+    "Quit MacSCP" : {
+
+    },
+    "Quitting now cancels them." : {
+
+    },
+    "R" : {
+
+    },
+    "Redo" : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Remote directory" : {
+
+    },
+    "Remote editing is not available yet." : {
+
+    },
+    "Remote files are deleted permanently." : {
+
+    },
+    "Rename" : {
+
+    },
+    "Rename “%@”" : {
+
+    },
+    "Rename…" : {
+
+    },
+    "Resume" : {
+
+    },
+    "Resume interrupted transfers" : {
+
+    },
+    "Retry" : {
+
+    },
+    "SCP" : {
+
+    },
+    "SFTP" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save Site" : {
+
+    },
+    "Save password in Keychain" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Server authentication" : {
+
+    },
+    "Server message" : {
+
+    },
+    "Session" : {
+
+    },
+    "Set permissions" : {
+
+    },
+    "Set permissions recursively" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Settings…" : {
+
+    },
+    "Show All" : {
+
+    },
+    "Show Hidden Files" : {
+
+    },
+    "Show Queue" : {
+
+    },
+    "Show hidden files" : {
+
+    },
+    "Site name" : {
+
+    },
+    "Size" : {
+
+    },
+    "Skip" : {
+
+    },
+    "Source" : {
+
+    },
+    "Speed" : {
+
+    },
+    "Switch Pane" : {
+
+    },
+    "The %@ key of %@:%@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The %1$@ key of %2$@:%3$@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%4$@"
+          }
+        }
+      }
+    },
+    "The server %@:%@ is not in your known hosts. Its %@ key fingerprint is:\n\n%@\n\nOnly continue if you trust this server." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The server %1$@:%2$@ is not in your known hosts. Its %3$@ key fingerprint is:\n\n%4$@\n\nOnly continue if you trust this server."
+          }
+        }
+      }
+    },
+    "Transfer of “%@” failed" : {
+
+    },
+    "Transfer settings" : {
+
+    },
+    "Transferred" : {
+
+    },
+    "Transfers" : {
+
+    },
+    "Transfers are still running." : {
+
+    },
+    "Transfers or uploads of edited files are still running." : {
+
+    },
+    "Undo" : {
+
+    },
+    "Update Key" : {
+
+    },
+    "Upload" : {
+
+    },
+    "Upload %lld items to remote folder:" : {
+
+    },
+    "Upload “%@” to remote folder:" : {
+
+    },
+    "Upload…" : {
+
+    },
+    "Use ssh-agent" : {
+
+    },
+    "User name" : {
+
+    },
+    "View" : {
+
+    },
+    "W" : {
+
+    },
+    "WARNING: the server's host key has changed!" : {
+
+    },
+    "Waiting" : {
+
+    },
+    "Window" : {
+
+    },
+    "X" : {
+
+    },
+    "Zoom" : {
+
+    },
+    "e.g. Work/Production" : {
+
+    },
+    "example.com" : {
+
+    },
+    "untitled folder" : {
+
+    },
+    "user@host" : {
+
+    },
+    "“%@” already exists. Overwrite it?" : {
+
+    }
+  },
+  "version" : "1.0"
+}

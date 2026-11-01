@@ -1,0 +1,47 @@
+name: MacSCP
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  MacSCPCore:
+    path: .
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
+targets:
+  MacSCP:
+    type: application
+    platform: macOS
+    sources:
+      - App/Sources
+      - App/Resources
+    dependencies:
+      - package: MacSCPCore
+        product: RemoteCore
+      - package: Sparkle
+    settings:
+      base:
+        PRODUCT_NAME: MacSCP
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.tomaszkubiak-courses.MacSCP
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: App/Info.plist
+        SPARKLE_FEED_URL: ""
+        SPARKLE_PUBLIC_KEY: ""
+        INFOPLIST_KEY_CFBundleDisplayName: MacSCP
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 MacSCP contributors. GPL-3. Based on WinSCP by Martin Přikryl."
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        SWIFT_EMIT_LOC_STRINGS: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        ONLY_ACTIVE_ARCH: NO
+        DEAD_CODE_STRIPPING: YES
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES

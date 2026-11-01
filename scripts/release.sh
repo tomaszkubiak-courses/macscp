@@ -1,0 +1,45 @@
+#!/bin/bash
+set -euo pipefail
+VERSION=${1:?usage: scripts/release.sh <version> [--adhoc]}
+ADHOC=${2:-}
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+OUT=$ROOT/build/release
+cd "$ROOT"
+
+if [ "$ADHOC" = --adhoc ]; then
+  IDENTITY="-"
+else
+  IDENTITY=${DEVELOPER_ID:?set DEVELOPER_ID to your "Developer ID Application: ..." identity}
+  SPARKLE_FEED_URL=${SPARKLE_FEED_URL:-https://github.com/tomaszkubiak-courses/macscp/releases/latest/download/appcast.xml}
+  : "${SPARKLE_PUBLIC_KEY:?set SPARKLE_PUBLIC_KEY}"
+fi
+
+[ -d Frameworks/CSSH.xcframework ] || scripts/build-cssh.sh
+xcodegen -q
+rm -rf "$OUT" && mkdir -p "$OUT"
+xcodebuild -project MacSCP.xcodeproj -scheme MacSCP -configuration Release -derivedDataPath "$OUT/dd" \
+  -destination "generic/platform=macOS" ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$(git rev-list --count HEAD)" \
+  CODE_SIGN_IDENTITY="$IDENTITY" CODE_SIGN_STYLE=Manual OTHER_CODE_SIGN_FLAGS="--timestamp" \
+  SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-}" SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY:-}" \
+  build | grep -E 'error:|BUILD' || true
+APP=$OUT/dd/Build/Products/Release/MacSCP.app
+[ -d "$APP" ] || { echo "build failed" >&2; exit 1; }
+codesign --verify --deep --strict "$APP"
+lipo -archs "$APP/Contents/MacOS/MacSCP"
+
+DMG=$OUT/MacSCP-$VERSION.dmg
+STAGE=$OUT/dmg && mkdir -p "$STAGE" && cp -R "$APP" "$STAGE/" && ln -s /Applications "$STAGE/Applications"
+hdiutil create -quiet -volname "MacSCP $VERSION" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+codesign --force --timestamp -s "$IDENTITY" "$DMG" 2>/dev/null || codesign --force -s "$IDENTITY" "$DMG"
+
+if [ "$ADHOC" != --adhoc ]; then
+  xcrun notarytool submit "$DMG" --keychain-profile "${NOTARY_PROFILE:-notary}" --wait
+  xcrun stapler staple "$DMG"
+  spctl --assess --type open --context context:primary-signature -v "$DMG"
+  GEN=$(find "$OUT/dd/SourcePackages/artifacts" -path '*Sparkle/bin/generate_appcast' | head -1)
+  mkdir -p build/updates && cp "$DMG" build/updates/
+  "$GEN" --download-url-prefix "https://github.com/tomaszkubiak-courses/macscp/releases/download/v$VERSION/" build/updates
+  echo "Upload build/updates/appcast.xml and $DMG; update Casks/macscp.rb sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
+fi
+echo "$DMG"
