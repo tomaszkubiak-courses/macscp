@@ -277,6 +277,21 @@ final class SSHConnection {
         var exitCode: UInt32
     }
 
+    func finish(_ ch: ssh_channel) {
+        if ssh_channel_is_closed(ch) == 0, let event = ssh_event_new() {
+            ssh_channel_send_eof(ch)
+            ssh_event_add_session(event, session)
+            let deadline = Date().addingTimeInterval(2)
+            while ssh_channel_is_closed(ch) == 0, ssh_is_connected(session) != 0, Date() < deadline {
+                if ssh_event_dopoll(event, 50) == SSH_ERROR { break }
+            }
+            ssh_event_remove_session(event, session)
+            ssh_event_free(event)
+        }
+        ssh_channel_close(ch)
+        ssh_channel_free(ch)
+    }
+
     func openExec(_ command: String) throws -> ssh_channel {
         var attempt = 0
         var ch: ssh_channel
@@ -303,7 +318,7 @@ final class SSHConnection {
     func exec(_ command: String) throws -> ExecResult {
         let ch = try openExec(command)
 
-        defer { ssh_channel_close(ch); ssh_channel_free(ch) }
+        defer { finish(ch) }
         var out = Data(), err = Data()
         var buf = [UInt8](repeating: 0, count: 64 * 1024)
         while true {

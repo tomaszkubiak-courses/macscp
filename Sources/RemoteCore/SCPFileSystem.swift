@@ -120,7 +120,7 @@ public actor SCPFileSystem: RemoteFileSystem {
         let ch: ssh_channel
         let ssh: SSHConnection
         init(_ ch: ssh_channel, _ ssh: SSHConnection) { self.ch = ch; self.ssh = ssh }
-        deinit { ssh_channel_close(ch); ssh_channel_free(ch) }
+        deinit { ssh.finish(ch) }
 
         func read(_ count: Int) throws -> [UInt8] {
             var buf = [UInt8](repeating: 0, count: count)
