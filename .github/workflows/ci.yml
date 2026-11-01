@@ -66,6 +66,11 @@ jobs:
       - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods)
         timeout-minutes: 20
         run: scripts/ci-run-tests.sh
+      - name: SCP probe (temporary)
+        if: always()
+        run: |
+          MACSCP_PROBE=1 swift test --skip-build --disable-swift-testing --filter testProbeConcurrentScp 2>&1 | grep PROBE || true
+          MACSCP_PROBE=1 MACSCP_NO_EXEC_EOF=1 swift test --skip-build --disable-swift-testing --filter testProbeConcurrentScp 2>&1 | grep PROBE || true
       - name: Server logs
         if: failure()
         run: for f in /tmp/dropbear.log /tmp/sshd.log; do echo "== $f"; tail -n 80 "$f"; done
