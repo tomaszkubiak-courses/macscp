@@ -19,11 +19,21 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 xcodebuild -project MacSCP.xcodeproj -scheme MacSCP -configuration Release -derivedDataPath "$OUT/dd" \
   -destination "generic/platform=macOS" ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$(git rev-list --count HEAD)" \
-  CODE_SIGN_IDENTITY="$IDENTITY" CODE_SIGN_STYLE=Manual OTHER_CODE_SIGN_FLAGS="--timestamp" \
+  CODE_SIGN_IDENTITY="$IDENTITY" CODE_SIGN_STYLE=Manual OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-}" \
   build | grep -E 'error:|BUILD' || true
 APP=$OUT/dd/Build/Products/Release/MacSCP.app
 [ -d "$APP" ] || { echo "build failed" >&2; exit 1; }
+if [ "$ADHOC" != --adhoc ]; then
+  SIGN=(codesign --force --timestamp --options runtime -s "$IDENTITY")
+  SP="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+  "${SIGN[@]}" "$SP/XPCServices/Installer.xpc"
+  "${SIGN[@]}" --preserve-metadata=entitlements "$SP/XPCServices/Downloader.xpc"
+  "${SIGN[@]}" "$SP/Autoupdate"
+  "${SIGN[@]}" "$SP/Updater.app"
+  "${SIGN[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
+  "${SIGN[@]}" "$APP"
+fi
 codesign --verify --deep --strict "$APP"
 lipo -archs "$APP/Contents/MacOS/MacSCP"
 

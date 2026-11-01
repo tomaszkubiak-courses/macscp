@@ -1,6 +1,6 @@
 cask "macscp" do
   version "0.1.0"
-  sha256 "REPLACE_WITH_DMG_SHA256"
+  sha256 "b897bf75759c46e7417b42b91e8bf0482ffb78ff1109e4ee9623075d0780d643"
 
   url "https://github.com/tomaszkubiak-courses/macscp/releases/download/v#{version}/MacSCP-#{version}.dmg"
   name "MacSCP"
