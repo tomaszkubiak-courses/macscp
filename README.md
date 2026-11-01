@@ -8,7 +8,7 @@ A native macOS SFTP and SCP client with a dual-pane Commander window, based on [
 
 MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org).
 
-> **Status: beta.** Version 0.1.0 is the first public release. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
+> **Status: beta.** Version 0.2.0 adds directory synchronization. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
 
 ## Features
 
@@ -34,7 +34,7 @@ MacSCP brings WinSCP's way of working to the Mac: local files on the left, the s
   - MacSCP asks before overwriting a file that changed on the server in the meantime.
 - **Drag and drop:** between the panes, from Finder to upload, and to Finder to download.
 - **Get Info** with permission editing, **Quick Look** for local files, and **Open in Terminal** for an `ssh` shell in the current folder.
-- **Directory synchronization** (on `main`, in the next release):
+- **Directory synchronization:**
   - Compare and sync a local and a remote folder, in either or both directions, with a preview before anything changes.
   - **Keep Remote Folder Up to Date** uploads local changes as you save them.
 
