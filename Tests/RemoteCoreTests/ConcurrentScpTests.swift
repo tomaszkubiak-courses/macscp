@@ -3,8 +3,7 @@ import XCTest
 @testable import RemoteCore
 
 extension IntegrationTests {
-    func testProbeConcurrentScp() async throws {
-        try XCTSkipUnless(Self.env["MACSCP_PROBE"] == "1")
+    func testConcurrentScpCommandsKeepTheConnection() async throws {
         for s in servers where s.protocols.contains(.scp) {
             let writer = try await connect(s, .scp)
             let reader = try await connect(s, .scp)
@@ -14,7 +13,7 @@ extension IntegrationTests {
             let src = try randomFile("probe.bin", size: 2000)
             try await writer.upload(src, to: file, offset: 0, progress: { _ in })
             var failures: [String] = []
-            let rounds = 150
+            let rounds = 60
             let dir: URL = scratch
             for i in 0..<rounds {
                 let target = dir.appendingPathComponent("p\(i)")
@@ -25,8 +24,7 @@ extension IntegrationTests {
                 do { try await r } catch { failures.append("download: \(error)") }
                 do { _ = try await l } catch { failures.append("info: \(error)") }
             }
-            print("PROBE \(s.name) eof=\(Self.env["MACSCP_NO_EXEC_EOF"] == nil): \(failures.count) failures in \(rounds) rounds")
-            for f in Set(failures).prefix(5) { print("PROBE   \(f)") }
+            XCTAssertEqual(failures.count, 0, "\(s.name): \(Set(failures).prefix(3))")
             try? await writer.delete(base, isDirectory: true)
             await writer.disconnect()
             await reader.disconnect()

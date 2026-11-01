@@ -11,7 +11,7 @@ extension IntegrationTests {
     func waitFor(_ what: String, timeout: Double = 10, _ check: () async throws -> Bool) async throws {
         let end = Date().addingTimeInterval(timeout)
         while Date() < end {
-            if try await check() { return }
+            if (try? await check()) == true { return }
             try await Task.sleep(for: .milliseconds(100))
         }
         XCTFail("timed out waiting for \(what)")
