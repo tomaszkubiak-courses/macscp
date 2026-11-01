@@ -9,18 +9,18 @@ cask "macscp" do
 
   livecheck do
     url "https://github.com/tomaszkubiak-courses/macscp/releases/latest/download/appcast.xml"
-    strategy :sparkle
+    strategy :sparkle, &:short_version
   end
 
   auto_updates true
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "MacSCP.app"
 
   zap trash: [
     "~/Library/Application Support/MacSCP",
-    "~/Library/Caches/MacSCP",
     "~/Library/Caches/io.github.tomaszkubiak-courses.MacSCP",
+    "~/Library/Caches/MacSCP",
     "~/Library/Preferences/io.github.tomaszkubiak-courses.MacSCP.plist",
   ]
 end
