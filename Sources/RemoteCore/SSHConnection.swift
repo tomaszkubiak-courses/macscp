@@ -303,7 +303,6 @@ final class SSHConnection {
     func exec(_ command: String) throws -> ExecResult {
         let ch = try openExec(command)
 
-        if ProcessInfo.processInfo.environment["MACSCP_NO_EXEC_EOF"] == nil { ssh_channel_send_eof(ch) }
         defer { ssh_channel_close(ch); ssh_channel_free(ch) }
         var out = Data(), err = Data()
         var buf = [UInt8](repeating: 0, count: 64 * 1024)
@@ -315,6 +314,7 @@ final class SSHConnection {
             if e > 0 { err.append(buf, count: Int(e)) }
             if n <= 0, e <= 0, ssh_channel_is_eof(ch) != 0 || ssh_channel_is_closed(ch) != 0 { break }
         }
+        ssh_channel_send_eof(ch)
         var code: UInt32 = 0
         var signal: UnsafeMutablePointer<CChar>?
         var core: Int32 = 0

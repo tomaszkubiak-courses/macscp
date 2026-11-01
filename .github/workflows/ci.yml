@@ -70,7 +70,6 @@ jobs:
         if: always()
         run: |
           MACSCP_PROBE=1 swift test --skip-build --disable-swift-testing --filter testProbeConcurrentScp 2>&1 | grep PROBE || true
-          MACSCP_PROBE=1 MACSCP_NO_EXEC_EOF=1 swift test --skip-build --disable-swift-testing --filter testProbeConcurrentScp 2>&1 | grep PROBE || true
       - name: Server logs
         if: failure()
         run: for f in /tmp/dropbear.log /tmp/sshd.log; do echo "== $f"; tail -n 80 "$f"; done
@@ -93,7 +92,8 @@ jobs:
               apt-get update -q >/dev/null &&
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build libssl-dev \
                 zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
-              scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
+              scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests;
+              r=$?; MACSCP_PROBE=1 swift test --skip-build --disable-swift-testing --filter testProbeConcurrentScp 2>&1 | grep PROBE; exit $r'
       - name: Server logs
         if: failure()
         run: for c in busybox openssh74 proftpd; do echo "== $c"; docker logs --tail 40 $c; done
