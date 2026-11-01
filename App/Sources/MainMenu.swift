@@ -23,6 +23,7 @@ enum MainMenu {
             item(String(localized: "New Session…"), #selector(AppDelegate.showSiteManager(_:)), "n"),
             item(String(localized: "Open in Terminal"), #selector(CommanderWindowController.openInTerminal(_:)), "t", [.command, .shift]),
             item(String(localized: "Edited Files…"), #selector(CommanderWindowController.showEditedFiles(_:)), "e", [.command, .shift]),
+            item(String(localized: "Synchronize…"), #selector(CommanderWindowController.synchronize(_:)), "s", [.command, .shift]),
             .separator(),
             item(String(localized: "Close"), #selector(NSWindow.performClose(_:)), "w"),
         ]))

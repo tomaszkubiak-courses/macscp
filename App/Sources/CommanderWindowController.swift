@@ -102,6 +102,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     var hasActiveWork: Bool {
         queueItems.contains { $0.state == .queued || $0.state == .running } || edits.hasPendingUploads
+            || syncModel?.isBusy == true
     }
 
     func activate(_ pane: FilePaneViewController) {
@@ -205,6 +206,28 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     func edit(_ paths: [String], with app: URL?) { edits.edit(paths, with: app) }
 
+    private var syncModel: SyncModel?
+
+    @objc func synchronize(_ sender: Any?) {
+        guard syncModel == nil else { return }
+        let model = SyncModel(session: session, localDir: local.path, remoteDir: remote.path)
+        model.onFinish = { [weak self] in
+            self?.local.refresh(nil)
+            self?.remote.refresh(nil)
+        }
+        syncModel = model
+        let host = NSHostingController(rootView: SynchronizeSheet(model: model, close: { [weak self] in
+            guard let self, let sheetWindow = self.window?.attachedSheet else { return }
+            self.window?.endSheet(sheetWindow)
+            self.syncModel = nil
+        }))
+        window?.contentViewController?.presentAsSheet(host)
+    }
+
+    #if DEBUG
+    func debugCompare() { syncModel?.compare() }
+    #endif
+
     @objc func showEditedFiles(_ sender: Any?) {
         let host = NSHostingController(rootView: EditedFilesView(manager: edits, close: { [weak self] in
             guard let self, let sheetWindow = self.window?.attachedSheet else { return }
@@ -286,6 +309,7 @@ final class PromiseDelegate: NSObject, NSFilePromiseProviderDelegate {
 extension CommanderWindowController: NSToolbarDelegate {
     nonisolated(unsafe) private static let items: [(String, String, String, Selector)] = [
         ("transfer", "Copy", "doc.on.doc", #selector(FilePaneViewController.transferSelection(_:))),
+        ("sync", "Synchronize", "arrow.triangle.2.circlepath", #selector(CommanderWindowController.synchronize(_:))),
         ("edit", "Edit", "pencil", #selector(FilePaneViewController.editSelection(_:))),
         ("newFolder", "New Folder", "folder.badge.plus", #selector(FilePaneViewController.newFolder(_:))),
         ("delete", "Delete", "trash", #selector(FilePaneViewController.deleteSelection(_:))),
@@ -307,7 +331,7 @@ extension CommanderWindowController: NSToolbarDelegate {
     }
 
     nonisolated func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        ["transfer", "edit", "newFolder", "delete", "info", NSToolbarItem.Identifier.flexibleSpace.rawValue,
+        ["transfer", "sync", "edit", "newFolder", "delete", "info", NSToolbarItem.Identifier.flexibleSpace.rawValue,
          "hidden", "refresh", "queue", "edited", "terminal"].map { NSToolbarItem.Identifier($0) }
     }
 

@@ -37,6 +37,9 @@
         }
       }
     },
+    "%lld changes found" : {
+
+    },
     "%lld files, %lld folders" : {
       "localizations" : {
         "en" : {
@@ -49,6 +52,19 @@
     },
     "%lld items" : {
 
+    },
+    "%lld items will be deleted." : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
     },
     "%lld transfers in progress" : {
 
@@ -77,6 +93,9 @@
     "Agent and default keys" : {
 
     },
+    "All" : {
+
+    },
     "Always" : {
 
     },
@@ -92,6 +111,9 @@
     "Back" : {
 
     },
+    "Both" : {
+
+    },
     "Bring All to Front" : {
 
     },
@@ -99,6 +121,12 @@
 
     },
     "Cancelled" : {
+
+    },
+    "Changed" : {
+
+    },
+    "Check for Updates…" : {
 
     },
     "Choose an editor" : {
@@ -120,6 +148,18 @@
 
     },
     "Common" : {
+
+    },
+    "Compare" : {
+
+    },
+    "Compare by size" : {
+
+    },
+    "Compare by time" : {
+
+    },
+    "Comparing…" : {
 
     },
     "Completed" : {
@@ -155,13 +195,31 @@
     "Delete %@?" : {
 
     },
+    "Delete files that are not in the source" : {
+
+    },
+    "Delete on server" : {
+
+    },
     "Destination" : {
+
+    },
+    "Direction" : {
+
+    },
+    "Done" : {
 
     },
     "Double-click to type a path" : {
 
     },
     "Download %lld items to local folder:" : {
+
+    },
+    "Download new" : {
+
+    },
+    "Download newer" : {
 
     },
     "Download “%@” to local folder:" : {
@@ -176,6 +234,12 @@
     "Edit With…" : {
 
     },
+    "Edited Files" : {
+
+    },
+    "Edited Files…" : {
+
+    },
     "Enclosing Folder" : {
 
     },
@@ -186,6 +250,9 @@
 
     },
     "Exclude hidden files" : {
+
+    },
+    "Existing files only" : {
 
     },
     "Failed: %@" : {
@@ -204,6 +271,9 @@
 
     },
     "Folder" : {
+
+    },
+    "Folders" : {
 
     },
     "Forward" : {
@@ -251,7 +321,19 @@
     "Jump hosts, proxies and other options come from ~/.ssh/config." : {
 
     },
+    "Keep Server Version" : {
+
+    },
     "Local directory" : {
+
+    },
+    "Local files" : {
+
+    },
+    "Local folder" : {
+
+    },
+    "Local → Remote" : {
 
     },
     "Location" : {
@@ -261,6 +343,9 @@
 
     },
     "Minimize" : {
+
+    },
+    "Mirror files (overwrite when times differ either way)" : {
 
     },
     "Modified" : {
@@ -306,6 +391,12 @@
         }
       }
     },
+    "No files are being edited. Choose Files > Edit on a remote file." : {
+
+    },
+    "None" : {
+
+    },
     "OK" : {
 
     },
@@ -321,16 +412,25 @@
     "Open in Terminal" : {
 
     },
+    "Opened" : {
+
+    },
     "Operation failed" : {
 
     },
     "Optional" : {
 
     },
+    "Options" : {
+
+    },
     "Other" : {
 
     },
     "Overwrite" : {
+
+    },
+    "Overwrite the server's version with yours?" : {
 
     },
     "Owner" : {
@@ -403,10 +503,16 @@
     "Remote directory" : {
 
     },
-    "Remote editing is not available yet." : {
+    "Remote files" : {
 
     },
     "Remote files are deleted permanently." : {
+
+    },
+    "Remote folder" : {
+
+    },
+    "Remote → Local" : {
 
     },
     "Rename" : {
@@ -416,6 +522,9 @@
 
     },
     "Rename…" : {
+
+    },
+    "Replace" : {
 
     },
     "Resume" : {
@@ -449,6 +558,9 @@
 
     },
     "Server message" : {
+
+    },
+    "Server version kept" : {
 
     },
     "Session" : {
@@ -493,7 +605,37 @@
     "Speed" : {
 
     },
+    "Stop" : {
+
+    },
+    "Stop and Discard" : {
+
+    },
+    "Stop tracking and delete the local copy" : {
+
+    },
+    "Stopping deletes the local copy and its changes." : {
+
+    },
     "Switch Pane" : {
+
+    },
+    "Synchronization cancelled." : {
+
+    },
+    "Synchronize" : {
+
+    },
+    "Synchronize %lld" : {
+
+    },
+    "Synchronized %lld items." : {
+
+    },
+    "Synchronize…" : {
+
+    },
+    "Synchronizing…" : {
 
     },
     "The %@ key of %@:%@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%@" : {
@@ -505,6 +647,12 @@
           }
         }
       }
+    },
+    "The existing item is overwritten." : {
+
+    },
+    "The folders are already in sync." : {
+
     },
     "The server %@:%@ is not in your known hosts. Its %@ key fingerprint is:\n\n%@\n\nOnly continue if you trust this server." : {
       "localizations" : {
@@ -528,9 +676,6 @@
     "Transfers" : {
 
     },
-    "Transfers are still running." : {
-
-    },
     "Transfers or uploads of edited files are still running." : {
 
     },
@@ -546,7 +691,25 @@
     "Upload %lld items to remote folder:" : {
 
     },
+    "Upload Anyway" : {
+
+    },
+    "Upload failed" : {
+
+    },
+    "Upload new" : {
+
+    },
+    "Upload newer" : {
+
+    },
     "Upload “%@” to remote folder:" : {
+
+    },
+    "Uploaded %@" : {
+
+    },
+    "Uploading…" : {
 
     },
     "Upload…" : {
@@ -585,13 +748,28 @@
     "example.com" : {
 
     },
+    "folder" : {
+
+    },
     "untitled folder" : {
 
     },
     "user@host" : {
 
     },
+    "| .git/; *.tmp" : {
+
+    },
     "“%@” already exists. Overwrite it?" : {
+
+    },
+    "“%@” already exists. Replace it?" : {
+
+    },
+    "“%@” changed on the server since you opened it." : {
+
+    },
+    "“%@” has changes not on the server." : {
 
     }
   },
