@@ -207,6 +207,16 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     func edit(_ paths: [String], with app: URL?) { edits.edit(paths, with: app) }
 
     private var syncModel: SyncModel?
+    private var keepUpToDate: KeepUpToDateWindowController?
+
+    @objc func keepRemoteUpToDate(_ sender: Any?) {
+        if keepUpToDate == nil {
+            let model = KeepUpToDateModel(session: session, localDir: local.path, remoteDir: remote.path)
+            model.onChange = { [weak self] in self?.remote.refresh(nil) }
+            keepUpToDate = KeepUpToDateWindowController(model: model, title: window?.title ?? "")
+        }
+        keepUpToDate?.showWindow(nil)
+    }
 
     @objc func synchronize(_ sender: Any?) {
         guard syncModel == nil else { return }
@@ -226,6 +236,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     #if DEBUG
     func debugCompare() { syncModel?.compare() }
+    func debugStartKeep() { keepUpToDate?.model.start() }
     #endif
 
     @objc func showEditedFiles(_ sender: Any?) {
@@ -273,6 +284,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     }
 
     func closeSessionNow() {
+        keepUpToDate?.close()
+        keepUpToDate = nil
         let s = session
         let e = edits!
         Task {

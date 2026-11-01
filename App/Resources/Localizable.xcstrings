@@ -201,6 +201,12 @@
     "Delete on server" : {
 
     },
+    "Delete remote files that are deleted locally" : {
+
+    },
+    "Deleted %@ on the server" : {
+
+    },
     "Destination" : {
 
     },
@@ -321,6 +327,12 @@
     "Jump hosts, proxies and other options come from ~/.ssh/config." : {
 
     },
+    "Keep Remote Folder Up to Date — %@" : {
+
+    },
+    "Keep Remote Folder Up to Date…" : {
+
+    },
     "Keep Server Version" : {
 
     },
@@ -331,6 +343,9 @@
 
     },
     "Local folder" : {
+
+    },
+    "Local folder does not exist." : {
 
     },
     "Local → Remote" : {
@@ -605,6 +620,9 @@
     "Speed" : {
 
     },
+    "Start" : {
+
+    },
     "Stop" : {
 
     },
@@ -612,6 +630,9 @@
 
     },
     "Stop tracking and delete the local copy" : {
+
+    },
+    "Stopped" : {
 
     },
     "Stopping deletes the local copy and its changes." : {
@@ -627,6 +648,9 @@
 
     },
     "Synchronize %lld" : {
+
+    },
+    "Synchronize the whole folder before watching" : {
 
     },
     "Synchronized %lld items." : {
@@ -703,6 +727,9 @@
     "Upload newer" : {
 
     },
+    "Upload to remote folder" : {
+
+    },
     "Upload “%@” to remote folder:" : {
 
     },
@@ -731,6 +758,15 @@
 
     },
     "Waiting" : {
+
+    },
+    "Watch local folder" : {
+
+    },
+    "Watching %@" : {
+
+    },
+    "Watching for changes…" : {
 
     },
     "Window" : {

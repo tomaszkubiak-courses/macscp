@@ -56,6 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 open(session, transferDelegate: delegate)
                 NSApp.activate()
                 if let edit = d.string(forKey: "MacSCPDebugEdit") { commanders.last?.edit([edit], with: nil) }
+                if d.bool(forKey: "MacSCPDebugKeep") {
+                    try? await Task.sleep(for: .seconds(2))
+                    commanders.last?.keepRemoteUpToDate(nil)
+                    commanders.last?.debugStartKeep()
+                }
                 if d.bool(forKey: "MacSCPDebugSync") {
                     try? await Task.sleep(for: .seconds(1))
                     commanders.last?.synchronize(nil)
