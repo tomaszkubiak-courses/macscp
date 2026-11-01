@@ -30,7 +30,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: App/Info.plist
         SPARKLE_FEED_URL: ""
-        SPARKLE_PUBLIC_KEY: ""
+        SPARKLE_PUBLIC_KEY: "+Fq8IektkkvLaKy6mXhuG0mfOmWLCV+aO5V06Pj9q2E="
         INFOPLIST_KEY_CFBundleDisplayName: MacSCP
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
         INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 MacSCP contributors. GPL-3. Based on WinSCP by Martin Přikryl."

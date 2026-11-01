@@ -9,9 +9,8 @@ cd "$ROOT"
 if [ "$ADHOC" = --adhoc ]; then
   IDENTITY="-"
 else
-  IDENTITY=${DEVELOPER_ID:?set DEVELOPER_ID to your "Developer ID Application: ..." identity}
+  IDENTITY=${DEVELOPER_ID:-Developer ID Application: Tomasz Kubiak (76QV9GADHD)}
   SPARKLE_FEED_URL=${SPARKLE_FEED_URL:-https://github.com/tomaszkubiak-courses/macscp/releases/latest/download/appcast.xml}
-  : "${SPARKLE_PUBLIC_KEY:?set SPARKLE_PUBLIC_KEY}"
 fi
 
 [ -d Frameworks/CSSH.xcframework ] || scripts/build-cssh.sh
@@ -21,7 +20,7 @@ xcodebuild -project MacSCP.xcodeproj -scheme MacSCP -configuration Release -deri
   -destination "generic/platform=macOS" ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$(git rev-list --count HEAD)" \
   CODE_SIGN_IDENTITY="$IDENTITY" CODE_SIGN_STYLE=Manual OTHER_CODE_SIGN_FLAGS="--timestamp" \
-  SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-}" SPARKLE_PUBLIC_KEY="${SPARKLE_PUBLIC_KEY:-}" \
+  SPARKLE_FEED_URL="${SPARKLE_FEED_URL:-}" \
   build | grep -E 'error:|BUILD' || true
 APP=$OUT/dd/Build/Products/Release/MacSCP.app
 [ -d "$APP" ] || { echo "build failed" >&2; exit 1; }
@@ -39,7 +38,8 @@ if [ "$ADHOC" != --adhoc ]; then
   spctl --assess --type open --context context:primary-signature -v "$DMG"
   GEN=$(find "$OUT/dd/SourcePackages/artifacts" -path '*Sparkle/bin/generate_appcast' | head -1)
   mkdir -p build/updates && cp "$DMG" build/updates/
-  "$GEN" --download-url-prefix "https://github.com/tomaszkubiak-courses/macscp/releases/download/v$VERSION/" build/updates
+  KEYARG=(); [ -n "${SPARKLE_KEY_FILE:-}" ] && KEYARG=(--ed-key-file "$SPARKLE_KEY_FILE")
+  "$GEN" ${KEYARG[@]+"${KEYARG[@]}"} --download-url-prefix "https://github.com/tomaszkubiak-courses/macscp/releases/download/v$VERSION/" build/updates
   echo "Upload build/updates/appcast.xml and $DMG; update Casks/macscp.rb sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
 fi
 echo "$DMG"
