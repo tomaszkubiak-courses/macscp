@@ -66,6 +66,9 @@ jobs:
       - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods)
         timeout-minutes: 20
         run: scripts/ci-run-tests.sh
+      - name: Server logs
+        if: failure()
+        run: for f in /tmp/dropbear.log /tmp/sshd.log; do echo "== $f"; tail -n 80 "$f"; done
 
   servers:
     runs-on: ubuntu-24.04

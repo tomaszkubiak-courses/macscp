@@ -16,13 +16,13 @@ chmod 600 /home/macscp/.ssh/authorized_keys
 sed -i 's/^session\s*required\s*pam_loginuid.so/session optional pam_loginuid.so/' /etc/pam.d/sshd
 mkdir -p /run/sshd
 ssh-keygen -A
-/usr/sbin/sshd -p 2222 -o UsePAM=yes -o PasswordAuthentication=yes -o KbdInteractiveAuthentication=yes
+/usr/sbin/sshd -p 2222 -E /tmp/sshd.log -o UsePAM=yes -o PasswordAuthentication=yes -o KbdInteractiveAuthentication=yes
 
 mkdir -p /usr/libexec
 ln -sf /usr/lib/openssh/sftp-server /usr/libexec/sftp-server
 ln -sf /usr/lib/openssh/sftp-server /usr/lib/sftp-server
 mkdir -p /etc/dropbear
-dropbear -R -p 2223
+dropbear -F -E -R -p 2223 >/tmp/dropbear.log 2>&1 &
 
 for p in 2222 2223; do
   for _ in $(seq 50); do nc -z 127.0.0.1 $p && break; sleep 0.1; done
