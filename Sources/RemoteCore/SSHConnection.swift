@@ -31,6 +31,9 @@ public struct ConnectionParameters: Sendable, Equatable {
     public var trustedCertificatesPath: String?
 
     public var region: String?
+    public var ftpActiveMode = false
+    public var proxy: Proxy?
+    public var proxyPassword: String?
 
     public var sshConfigPath: String?
     public var timeoutSeconds = 15
@@ -86,6 +89,7 @@ final class SSHConnection {
     let session: ssh_session
     let parameters: ConnectionParameters
     private(set) var resolvedUser = ""
+    private var proxySocket: Int32 = -1
 
     init(_ parameters: ConnectionParameters) {
         session = ssh_new()
@@ -95,6 +99,7 @@ final class SSHConnection {
     deinit {
         ssh_disconnect(session)
         ssh_free(session)
+        if proxySocket >= 0 { close(proxySocket) }
     }
 
     var lastError: String {
@@ -125,6 +130,17 @@ final class SSHConnection {
             throw RemoteError(.connection, "Cannot read SSH config: \(lastError)")
         }
         if var port = p.port.map(UInt32.init) { ssh_options_set(session, SSH_OPTIONS_PORT, &port) }
+        if let proxy = p.proxy {
+            var host: UnsafeMutablePointer<CChar>?
+            ssh_options_get(session, SSH_OPTIONS_HOST, &host)
+            let target = host.map { String(cString: $0) } ?? p.host
+            ssh_string_free_char(host)
+            var port: UInt32 = 22
+            ssh_options_get_port(session, &port)
+            var fd = try ProxyTunnel.open(proxy, password: p.proxyPassword, host: target, port: Int(port), timeout: p.timeoutSeconds)
+            proxySocket = fd
+            ssh_options_set(session, SSH_OPTIONS_FD, &fd)
+        }
         if !p.user.isEmpty { ssh_options_set(session, SSH_OPTIONS_USER, p.user) }
         if let kh = p.knownHostsPath { ssh_options_set(session, SSH_OPTIONS_KNOWNHOSTS, kh) }
         var timeout = Int(p.timeoutSeconds)

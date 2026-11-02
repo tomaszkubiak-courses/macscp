@@ -84,6 +84,8 @@ public actor FTPFileSystem: RemoteFileSystem {
         cssh_curl_long(c, CURLOPT_SERVER_RESPONSE_TIMEOUT, 60)
         cssh_curl_long(c, CURLOPT_FTP_FILEMETHOD, CSSH_FTP_SINGLECWD)
         if proto == .ftps { cssh_curl_long(c, CURLOPT_USE_SSL, CSSH_USESSL_ALL) }
+        if parameters.ftpActiveMode { cssh_curl_string(c, CURLOPT_FTPPORT, "-") }
+        Curl.applyProxy(c, parameters, tunnel: true)
         let sendFacts = facts && !factsSent
         var list: UnsafeMutablePointer<curl_slist>?
         defer { curl_slist_free_all(list) }
@@ -115,7 +117,7 @@ public actor FTPFileSystem: RemoteFileSystem {
         let kind: RemoteError.Kind
         switch rc {
         case CURLE_LOGIN_DENIED: kind = .authentication
-        case CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_CONNECT, CURLE_SEND_ERROR, CURLE_RECV_ERROR,
+        case CURLE_COULDNT_RESOLVE_PROXY, CURLE_PROXY, CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_CONNECT, CURLE_SEND_ERROR, CURLE_RECV_ERROR,
              CURLE_OPERATION_TIMEDOUT, CURLE_GOT_NOTHING, CURLE_PARTIAL_FILE, CURLE_SSL_CONNECT_ERROR,
              CURLE_WEIRD_SERVER_REPLY, CURLE_FTP_WEIRD_PASV_REPLY, CURLE_FTP_WEIRD_227_FORMAT,
              CURLE_FTP_CANT_GET_HOST, CURLE_FTP_ACCEPT_FAILED, CURLE_FTP_ACCEPT_TIMEOUT, CURLE_FTP_PORT_FAILED:

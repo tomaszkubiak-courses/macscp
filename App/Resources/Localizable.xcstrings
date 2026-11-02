@@ -90,6 +90,9 @@
     "Access key ID" : {
 
     },
+    "Active mode (the server connects back to this Mac)" : {
+
+    },
     "Add" : {
 
     },
@@ -402,6 +405,9 @@
     "Group" : {
 
     },
+    "HTTP" : {
+
+    },
     "Help" : {
 
     },
@@ -615,6 +621,18 @@
     "Progress" : {
 
     },
+    "Proxy" : {
+
+    },
+    "Proxy host" : {
+
+    },
+    "Proxy password" : {
+
+    },
+    "Proxy user" : {
+
+    },
     "Queue (%lld)" : {
 
     },
@@ -688,6 +706,9 @@
 
     },
     "SFTP" : {
+
+    },
+    "SOCKS5" : {
 
     },
     "Save" : {

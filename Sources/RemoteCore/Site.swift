@@ -12,6 +12,18 @@ public enum FileProtocol: String, Codable, Sendable, CaseIterable {
     public var isSSH: Bool { self == .sftp || self == .scp }
 }
 
+public struct Proxy: Codable, Sendable, Hashable {
+    public enum Kind: String, Codable, Sendable, CaseIterable { case socks5, http }
+    public var kind = Kind.socks5
+    public var host = ""
+    public var port = 1080
+    public var user = ""
+
+    public init(kind: Kind = .socks5, host: String = "", port: Int = 1080, user: String = "") {
+        self.kind = kind; self.host = host; self.port = port; self.user = user
+    }
+}
+
 public struct Site: Codable, Sendable, Hashable, Identifiable {
     public var id = UUID()
     public var name: String
@@ -26,6 +38,8 @@ public struct Site: Codable, Sendable, Hashable, Identifiable {
     public var remoteDirectory = ""
     public var localDirectory = ""
     public var region: String?
+    public var ftpActiveMode: Bool?
+    public var proxy: Proxy?
 
     public init(name: String, host: String, fileProtocol: FileProtocol = .sftp, user: String = "") {
         self.name = name; self.host = host; self.fileProtocol = fileProtocol; self.user = user
@@ -36,6 +50,13 @@ public struct Site: Codable, Sendable, Hashable, Identifiable {
                                      privateKeyPath: privateKeyPath?.isEmpty == false ? privateKeyPath : nil)
         p.useAgent = useAgent
         p.region = region?.isEmpty == false ? region : nil
+        p.ftpActiveMode = ftpActiveMode ?? false
+        if let proxy, !proxy.host.isEmpty {
+            p.proxy = proxy
+            #if canImport(Security)
+            p.proxyPassword = Keychain.password(for: id, account: "proxy")
+            #endif
+        }
         return p
     }
 }
@@ -66,24 +87,24 @@ public struct SiteStore: Sendable {
 public enum Keychain {
     static let service = "MacSCP"
 
-    private static func query(_ id: UUID) -> [String: Any] {
+    private static func query(_ id: UUID, _ account: String? = nil) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
-         kSecAttrAccount as String: id.uuidString]
+         kSecAttrAccount as String: id.uuidString + (account.map { "-" + $0 } ?? "")]
     }
 
-    public static func password(for id: UUID) -> String? {
-        var q = query(id)
+    public static func password(for id: UUID, account: String? = nil) -> String? {
+        var q = query(id, account)
         q[kSecReturnData as String] = true
         var out: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
-    public static func setPassword(_ password: String?, for id: UUID) throws {
-        SecItemDelete(query(id) as CFDictionary)
+    public static func setPassword(_ password: String?, for id: UUID, account: String? = nil) throws {
+        SecItemDelete(query(id, account) as CFDictionary)
         guard let password else { return }
-        var q = query(id)
+        var q = query(id, account)
         q[kSecValueData as String] = Data(password.utf8)
         let status = SecItemAdd(q as CFDictionary, nil)
         guard status == errSecSuccess else {

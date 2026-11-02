@@ -67,6 +67,7 @@ public actor WebDAVFileSystem: RemoteFileSystem {
                       _ configure: (UnsafeMutableRawPointer, Exchange) -> Void = { _, _ in }) throws -> Exchange {
         guard let c = curl else { throw RemoteError(.connection, "Not connected.") }
         let x = Curl.prepare(c, url(path, directory: directory), timeout: parameters.timeoutSeconds, tls: tls)
+        Curl.applyProxy(c, parameters, tunnel: false)
         if !user.isEmpty {
             cssh_curl_string(c, CURLOPT_USERNAME, user)
             cssh_curl_string(c, CURLOPT_PASSWORD, password)

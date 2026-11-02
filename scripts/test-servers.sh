@@ -12,6 +12,8 @@ S3_DIR=$ROOT/build/s3
 DAV_DIR=$ROOT/build/webdav
 DAV_PORT=${DAV_PORT:-8080}
 DAV_TLS_PORT=${DAV_TLS_PORT:-8443}
+SOCKS_PORT=${SOCKS_PORT:-1080}
+HTTP_PROXY_PORT=${HTTP_PROXY_PORT:-3128}
 
 wait_port() {
   for _ in $(seq 50); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.1; done
@@ -19,7 +21,7 @@ wait_port() {
 }
 
 stop() {
-  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid "$DAV_DIR"/dav.pid "$DAV_DIR"/dav-tls.pid; do
+  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid "$DAV_DIR"/dav.pid "$DAV_DIR"/dav-tls.pid "$DIR"/socks.pid "$DIR"/http-proxy.pid; do
     [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true
     rm -f "$p"
   done
@@ -80,6 +82,14 @@ CONF
   "$ROOT/scripts/webdav-server.sh" "$DAV_DIR/venv/bin/wsgidav" "$DAV_DIR" "$(id -un)" macscp-dav "$FTP_DIR/cert.pem" "$FTP_DIR/key.pem" \
     "$DAV_PORT" "$DAV_TLS_PORT"
   wait_port "$DAV_PORT"
-  wait_port "$DAV_TLS_PORT" ;;
+  wait_port "$DAV_TLS_PORT"
+
+  ssh -N -D "127.0.0.1:$SOCKS_PORT" -p "$SSHD_PORT" -i "$DIR/id_ed25519" -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$(id -un)@127.0.0.1" &
+  echo $! > "$DIR/socks.pid"
+  python3 "$ROOT/scripts/connect-proxy.py" "$HTTP_PROXY_PORT" >"$DIR/http-proxy.log" 2>&1 &
+  echo $! > "$DIR/http-proxy.pid"
+  wait_port "$SOCKS_PORT"
+  wait_port "$HTTP_PROXY_PORT" ;;
 stop) stop ;;
 esac

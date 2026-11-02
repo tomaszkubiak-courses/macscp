@@ -16,9 +16,21 @@ enum Curl {
     static let defaultCertificatesPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("MacSCP/trusted_certificates").path
 
+    static func applyProxy(_ c: UnsafeMutableRawPointer, _ p: ConnectionParameters, tunnel: Bool) {
+        guard let proxy = p.proxy else { return }
+        let host = proxy.host.contains(":") ? "[\(proxy.host)]" : proxy.host
+        cssh_curl_string(c, CURLOPT_PROXY, "\(proxy.kind == .socks5 ? "socks5h" : "http")://\(host):\(proxy.port)")
+        if !proxy.user.isEmpty {
+            cssh_curl_string(c, CURLOPT_PROXYUSERNAME, proxy.user)
+            cssh_curl_string(c, CURLOPT_PROXYPASSWORD, p.proxyPassword ?? "")
+        }
+        if tunnel, proxy.kind == .http { cssh_curl_long(c, CURLOPT_HTTPPROXYTUNNEL, 1) }
+    }
+
     static func isConnectionError(_ rc: CURLcode) -> Bool {
         [CURLE_COULDNT_RESOLVE_HOST, CURLE_COULDNT_CONNECT, CURLE_SEND_ERROR, CURLE_RECV_ERROR, CURLE_OPERATION_TIMEDOUT,
-         CURLE_GOT_NOTHING, CURLE_PARTIAL_FILE, CURLE_SSL_CONNECT_ERROR, CURLE_WEIRD_SERVER_REPLY].contains(rc)
+         CURLE_GOT_NOTHING, CURLE_PARTIAL_FILE, CURLE_SSL_CONNECT_ERROR, CURLE_WEIRD_SERVER_REPLY,
+         CURLE_COULDNT_RESOLVE_PROXY, CURLE_PROXY].contains(rc)
     }
 
     static func encode(_ s: some StringProtocol) -> String { String(s).addingPercentEncoding(withAllowedCharacters: unreserved)! }

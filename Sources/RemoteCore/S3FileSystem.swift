@@ -145,6 +145,7 @@ public actor S3FileSystem: RemoteFileSystem {
         cssh_curl_string(c, CURLOPT_USERNAME, accessKey)
         cssh_curl_string(c, CURLOPT_PASSWORD, secretKey)
         cssh_curl_string(c, CURLOPT_AWS_SIGV4, "aws:amz:\(region):s3")
+        Curl.applyProxy(c, parameters, tunnel: false)
         var list: UnsafeMutablePointer<curl_slist>?
         defer { curl_slist_free_all(list) }
         for h in headers + (sessionToken.map { ["x-amz-security-token: \($0)"] } ?? []) { list = curl_slist_append(list, h) }

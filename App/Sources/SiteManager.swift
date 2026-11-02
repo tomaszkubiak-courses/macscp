@@ -11,6 +11,7 @@ final class SiteManagerModel {
     var selection: String? = Node.newSiteID
     var draft = Site(name: "", host: "")
     var password = ""
+    var proxyPassword = ""
     var savePassword = true
     var connecting = false
     var error: String?
@@ -63,9 +64,11 @@ final class SiteManagerModel {
         if id == Node.newSiteID || id == nil {
             draft = Site(name: "", host: "")
             password = ""
+            proxyPassword = ""
         } else if let site = sites.first(where: { $0.id.uuidString == id }) {
             draft = site
             password = Keychain.password(for: site.id) ?? ""
+            proxyPassword = Keychain.password(for: site.id, account: "proxy") ?? ""
             savePassword = !password.isEmpty
         }
         error = nil
@@ -82,6 +85,7 @@ final class SiteManagerModel {
         do {
             try store.save(sites)
             try Keychain.setPassword(savePassword && !password.isEmpty ? password : nil, for: draft.id)
+            try Keychain.setPassword(draft.proxy != nil && !proxyPassword.isEmpty ? proxyPassword : nil, for: draft.id, account: "proxy")
             selection = draft.id.uuidString
         } catch {
             self.error = "\(error)"
@@ -102,6 +106,9 @@ final class SiteManagerModel {
     func login() {
         fillDefaultHost()
         guard !draft.host.isEmpty else { error = String(localized: "Enter a host name."); return }
+        if draft.proxy != nil, !proxyPassword.isEmpty {
+            try? Keychain.setPassword(proxyPassword, for: draft.id, account: "proxy")
+        }
         connecting = true
         error = nil
         let site = draft
@@ -222,6 +229,37 @@ struct SiteManagerView: View {
                         Toggle("Save password in Keychain", isOn: $model.savePassword)
                     }
                     DisclosureGroup("Advanced", isExpanded: $advanced) {
+                        if model.draft.fileProtocol == .ftp || model.draft.fileProtocol == .ftps {
+                            Toggle("Active mode (the server connects back to this Mac)", isOn: Binding(
+                                get: { model.draft.ftpActiveMode ?? false }, set: { model.draft.ftpActiveMode = $0 ? true : nil }))
+                        }
+                        Picker("Proxy", selection: Binding(get: { model.draft.proxy?.kind },
+                                                           set: { kind in
+                            if let kind {
+                                var p = model.draft.proxy ?? Proxy(port: kind == .socks5 ? 1080 : 8080)
+                                p.kind = kind
+                                model.draft.proxy = p
+                            } else {
+                                model.draft.proxy = nil
+                            }
+                        })) {
+                            Text("None").tag(Proxy.Kind?.none)
+                            Text("SOCKS5").tag(Proxy.Kind?.some(.socks5))
+                            Text("HTTP").tag(Proxy.Kind?.some(.http))
+                        }
+                        if model.draft.proxy != nil {
+                            HStack {
+                                TextField("Proxy host", text: Binding(get: { model.draft.proxy?.host ?? "" },
+                                                                      set: { model.draft.proxy?.host = $0 }))
+                                TextField("Port", value: Binding(get: { model.draft.proxy?.port ?? 1080 },
+                                                                 set: { model.draft.proxy?.port = $0 }),
+                                          format: .number.grouping(.never))
+                                    .frame(width: 110)
+                            }
+                            TextField("Proxy user", text: Binding(get: { model.draft.proxy?.user ?? "" },
+                                                                  set: { model.draft.proxy?.user = $0 }), prompt: Text("Optional"))
+                            SecureField("Proxy password", text: $model.proxyPassword, prompt: Text("Optional"))
+                        }
                         if s3 {
                             TextField("Region", text: Binding(get: { model.draft.region ?? "" },
                                                               set: { model.draft.region = $0.isEmpty ? nil : $0 }),
