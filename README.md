@@ -124,10 +124,10 @@ CI runs the integration suite against:
 
 | Path | Contents |
 | --- | --- |
-| `Sources/RemoteCore` | Engine: SSH connection, SFTP and SCP, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
+| `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP and FTP/FTPS, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
 | `App/Sources` | The macOS app: Commander window, panes, queue, dialogs. |
 | `Tests/RemoteCoreTests` | Unit and integration tests. |
-| `scripts` | Building libssh, test servers, benchmarks, releases. |
+| `scripts` | Building libssh and libcurl, test servers, benchmarks, releases. |
 
 ## Roadmap
 
