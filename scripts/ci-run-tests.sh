@@ -1,6 +1,6 @@
 #!/bin/bash
 set -uo pipefail
-swift build --build-tests >/dev/null || exit 1
+swift build --build-tests > /tmp/build.log 2>&1 || { grep -E "error:" /tmp/build.log | sort -u | head -40; exit 1; }
 LOG=$(mktemp)
 stdbuf -oL -eL swift test --skip-build --disable-swift-testing "$@" > >(tee "$LOG") 2>&1 &
 PID=$!

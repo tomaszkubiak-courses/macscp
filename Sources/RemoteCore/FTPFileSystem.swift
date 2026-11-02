@@ -137,7 +137,7 @@ public actor FTPFileSystem: RemoteFileSystem {
         cssh_curl_long(c, CURLOPT_SERVER_RESPONSE_TIMEOUT, 60)
         cssh_curl_long(c, CURLOPT_LOW_SPEED_LIMIT, 1)
         cssh_curl_long(c, CURLOPT_LOW_SPEED_TIME, 60)
-        cssh_curl_long(c, CURLOPT_FTP_FILEMETHOD, CURLFTPMETHOD_SINGLECWD)
+        cssh_curl_long(c, CURLOPT_FTP_FILEMETHOD, CSSH_FTP_SINGLECWD)
         cssh_curl_pointer(c, CURLOPT_ERRORBUFFER, x.errorBuffer)
         cssh_curl_write(c, CURLOPT_HEADERFUNCTION, onReply)
         cssh_curl_pointer(c, CURLOPT_HEADERDATA, me)
@@ -149,7 +149,7 @@ public actor FTPFileSystem: RemoteFileSystem {
         cssh_curl_pointer(c, CURLOPT_XFERINFODATA, me)
         cssh_curl_long(c, CURLOPT_NOPROGRESS, 0)
         if proto != .ftp {
-            if proto == .ftps { cssh_curl_long(c, CURLOPT_USE_SSL, CURLUSESSL_ALL) }
+            if proto == .ftps { cssh_curl_long(c, CURLOPT_USE_SSL, CSSH_USESSL_ALL) }
             cssh_curl_long(c, CURLOPT_SSL_VERIFYPEER, 1)
             cssh_curl_long(c, CURLOPT_SSL_VERIFYHOST, 0)
             cssh_curl_ssl_ctx(c, configureTLS)

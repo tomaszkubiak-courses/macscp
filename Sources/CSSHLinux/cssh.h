@@ -6,6 +6,9 @@
 #include "openssl/ssl.h"
 #include "openssl/x509v3.h"
 
+static const long CSSH_FTP_SINGLECWD = CURLFTPMETHOD_SINGLECWD;
+static const long CSSH_USESSL_ALL = CURLUSESSL_ALL;
+
 static inline CURLcode cssh_curl_global_init(void) { return curl_global_init(CURL_GLOBAL_ALL); }
 static inline CURLcode cssh_curl_long(CURL *c, CURLoption o, long v) { return curl_easy_setopt(c, o, v); }
 static inline CURLcode cssh_curl_offset(CURL *c, CURLoption o, curl_off_t v) { return curl_easy_setopt(c, o, v); }
