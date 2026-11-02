@@ -131,8 +131,7 @@ CI runs the integration suite against:
 
 ## Roadmap
 
-- **Next:** FTP and FTPS.
-- **Then:** Amazon S3.
+- **Next:** Amazon S3.
 - **Later:** WebDAV, an internal text editor, importing WinSCP sites and PuTTY keys, and translations.
 
 ## Relationship to WinSCP
