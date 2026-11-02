@@ -5,6 +5,8 @@ OPENSSL_VERSION=3.5.9
 OPENSSL_SHA256=603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a
 LIBSSH_VERSION=0.12.2
 LIBSSH_SHA256=49560f677d96e3706a904ac2de1116e25f3680937d51e5c92198fcba4a1c1e9f
+CURL_VERSION=8.23.0
+CURL_SHA256=8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5
 MIN_MACOS=14.0
 ARCHS=(arm64 x86_64)
 
@@ -23,6 +25,7 @@ mkdir -p "$WORK/src"
 cd "$WORK/src"
 fetch "https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz" $OPENSSL_SHA256 openssl.tar.gz
 fetch "https://www.libssh.org/files/${LIBSSH_VERSION%.*}/libssh-$LIBSSH_VERSION.tar.xz" $LIBSSH_SHA256 libssh.tar.xz
+fetch "https://curl.se/download/curl-$CURL_VERSION.tar.xz" $CURL_SHA256 curl.tar.xz
 
 if [ "$(uname)" = Linux ]; then
   rm -rf "$WORK/build-linux" && mkdir -p "$WORK/build-linux" && cd "$WORK/build-linux"
@@ -54,23 +57,37 @@ for arch in "${ARCHS[@]}"; do
     -DWITH_SERVER=OFF -DWITH_GSSAPI=ON -DWITH_ZLIB=ON >/dev/null
   cmake --build libssh-build >/dev/null && cmake --install libssh-build >/dev/null
 
-  libtool -static -no_warning_for_no_symbols -o "$prefix/lib/libcssh.a" "$prefix/lib/libssh.a" "$prefix/lib/libcrypto.a"
+  tar xJf "$WORK/src/curl.tar.xz"
+  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=$arch -DCMAKE_OSX_DEPLOYMENT_TARGET=$MIN_MACOS \
+    -DCMAKE_INSTALL_PREFIX="$prefix" -DOPENSSL_ROOT_DIR="$prefix" -DOPENSSL_USE_STATIC_LIBS=ON \
+    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF \
+    -DBUILD_LIBCURL_DOCS=OFF -DBUILD_MISC_DOCS=OFF -DENABLE_CURL_MANUAL=OFF -DCURL_USE_PKGCONFIG=OFF \
+    -DCURL_USE_OPENSSL=ON -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_GSSAPI=OFF \
+    -DUSE_NGHTTP2=OFF -DUSE_LIBIDN2=OFF -DUSE_APPLE_IDN=OFF -DCURL_BROTLI=OFF -DCURL_ZSTD=OFF -DCURL_ZLIB=OFF \
+    -DCURL_DISABLE_HTTP=ON -DCURL_DISABLE_DICT=ON -DCURL_DISABLE_FILE=ON -DCURL_DISABLE_GOPHER=ON \
+    -DCURL_DISABLE_IMAP=ON -DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_LDAPS=ON -DCURL_DISABLE_MQTT=ON \
+    -DCURL_DISABLE_POP3=ON -DCURL_DISABLE_RTSP=ON -DCURL_DISABLE_SMTP=ON \
+    -DCURL_DISABLE_TELNET=ON -DCURL_DISABLE_TFTP=ON -DCURL_DISABLE_IPFS=ON -DCURL_DISABLE_WEBSOCKETS=ON >/dev/null
+  cmake --build curl-build >/dev/null && cmake --install curl-build >/dev/null
+
+  libtool -static -no_warning_for_no_symbols -o "$prefix/lib/libcssh.a" \
+    "$prefix/lib/libssh.a" "$prefix/lib/libcurl.a" "$prefix/lib/libssl.a" "$prefix/lib/libcrypto.a"
 done
 
 STAGE=$WORK/universal
 rm -rf "$STAGE" "$OUT" && mkdir -p "$STAGE/Headers"
 lipo -create $(for a in "${ARCHS[@]}"; do echo "$WORK/$a/lib/libcssh.a"; done) -output "$STAGE/libcssh.a"
-cp -R "$WORK/${ARCHS[0]}/include/libssh" "$STAGE/Headers/"
-cat > "$STAGE/Headers/cssh.h" <<'EOF'
-#include "libssh/libssh.h"
-#include "libssh/sftp.h"
-#include "libssh/callbacks.h"
-EOF
+cp -R "$WORK/${ARCHS[0]}"/include/{libssh,curl,openssl} "$STAGE/Headers/"
+cp "$ROOT/Sources/CSSHLinux/cssh.h" "$STAGE/Headers/"
 cat > "$STAGE/Headers/module.modulemap" <<'EOF'
 module CSSH {
   header "cssh.h"
   link "z"
   link "gssapi_krb5"
+  link framework "CoreFoundation"
+  link framework "SystemConfiguration"
+  link framework "CoreServices"
   export *
 }
 EOF

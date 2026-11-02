@@ -40,7 +40,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         buildLayout()
         let site = session.site
         window.title = site.name.isEmpty ? site.host : site.name
-        window.subtitle = "\(site.fileProtocol.rawValue.uppercased()) · \(site.user.isEmpty ? "" : site.user + "@")\(site.host)"
+        let proto = site.fileProtocol.isFTP ? (site.fileProtocol == .ftp ? "FTP" : "FTPS") : site.fileProtocol.rawValue.uppercased()
+        window.subtitle = "\(proto) · \(site.user.isEmpty ? "" : site.user + "@")\(site.host)"
         window.setFrameAutosaveName("Commander")
         if window.frame.width < 600 { window.center() }
         local.start(at: site.localDirectory)
@@ -142,7 +143,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     @objc func openInTerminal(_ sender: Any?) {
         let s = session.site
         var args = ["ssh"]
-        if let port = s.port { args += ["-p", String(port)] }
+        if let port = s.port, !s.fileProtocol.isFTP { args += ["-p", String(port)] }
         if let key = s.privateKeyPath, !key.isEmpty { args += ["-i", key] }
         args.append(s.user.isEmpty ? s.host : "\(s.user)@\(s.host)")
         args += ["-t", "cd \(RemotePath.shellQuote(remote.path)) && exec \"$SHELL\" -l"]

@@ -1,5 +1,8 @@
 module CSSH [system] {
   header "cssh.h"
   link "ssh"
+  link "curl"
+  link "ssl"
+  link "crypto"
   export *
 }

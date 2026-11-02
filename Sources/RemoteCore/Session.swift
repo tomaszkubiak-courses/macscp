@@ -28,6 +28,7 @@ public actor Session {
         switch proto {
         case .sftp: try await SFTPFileSystem.connect(params, prompter: prompter)
         case .scp: try await SCPFileSystem.connect(params, prompter: prompter)
+        case .ftp, .ftps, .ftpsImplicit: try await FTPFileSystem.connect(params, proto, prompter: prompter)
         }
     }
 
@@ -77,6 +78,13 @@ final class CachingPrompter: ConnectionPrompter, @unchecked Sendable {
     func verifyHostKey(_ info: HostKeyInfo) async -> HostKeyDecision {
         if locked({ acceptedKeys.contains(info.fingerprint) }) { return .acceptOnce }
         let d = await inner.verifyHostKey(info)
+        if d != .reject { locked { _ = acceptedKeys.insert(info.fingerprint) } }
+        return d
+    }
+
+    func verifyCertificate(_ info: CertificateInfo) async -> HostKeyDecision {
+        if locked({ acceptedKeys.contains(info.fingerprint) }) { return .acceptOnce }
+        let d = await inner.verifyCertificate(info)
         if d != .reject { locked { _ = acceptedKeys.insert(info.fingerprint) } }
         return d
     }

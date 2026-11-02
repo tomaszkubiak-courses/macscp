@@ -98,7 +98,7 @@ You need Xcode 26 or later and [Homebrew](https://brew.sh).
 
 ```sh
 brew install cmake ninja xcodegen
-scripts/build-cssh.sh          # builds libssh and OpenSSL as a universal xcframework (first time only)
+scripts/build-cssh.sh          # builds libssh, libcurl and OpenSSL as a universal xcframework (first time only)
 swift build                    # the RemoteCore engine
 xcodegen                       # generates MacSCP.xcodeproj from project.yml
 open MacSCP.xcodeproj          # or: xcodebuild -project MacSCP.xcodeproj -scheme MacSCP build
@@ -106,18 +106,18 @@ open MacSCP.xcodeproj          # or: xcodebuild -project MacSCP.xcodeproj -schem
 
 ### Tests
 
-Unit tests run with `swift test`. Integration tests need SSH servers; the repository starts throwaway ones on localhost:
+Unit tests run with `swift test`. Integration tests need SSH and FTP servers; the repository starts throwaway ones on localhost:
 
 ```sh
 brew install dropbear
-scripts/test-servers.sh start  # OpenSSH on 127.0.0.1:2222, Dropbear on 127.0.0.1:2223
+scripts/test-servers.sh start  # OpenSSH on :2222, Dropbear on :2223, FTP and FTPS (pyftpdlib) on :2121
 MACSCP_INTEGRATION=1 swift test
 scripts/test-servers.sh stop
 ```
 
 CI runs the integration suite against:
-- OpenSSH and Dropbear on macOS and Linux, including password logins.
-- OpenSSH 7.4, a BusyBox userland and ProFTPD.
+- OpenSSH, Dropbear and pyftpdlib (FTP and FTPS) on macOS and Linux, including password logins.
+- OpenSSH 7.4, a BusyBox userland, and ProFTPD over SFTP, FTP, and explicit and implicit FTPS.
 
 ### Project layout
 

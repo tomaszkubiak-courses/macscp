@@ -4,7 +4,9 @@ import Security
 #endif
 
 public enum FileProtocol: String, Codable, Sendable, CaseIterable {
-    case sftp, scp
+    case sftp, scp, ftp, ftps, ftpsImplicit
+
+    public var isFTP: Bool { self == .ftp || self == .ftps || self == .ftpsImplicit }
 }
 
 public struct Site: Codable, Sendable, Hashable, Identifiable {

@@ -4,6 +4,8 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DIR=$ROOT/build/sshd
 SSHD_PORT=${SSHD_PORT:-2222}
 DROPBEAR_PORT=${DROPBEAR_PORT:-2223}
+FTP_PORT=${FTP_PORT:-2121}
+FTP_DIR=$ROOT/build/ftpd
 
 wait_port() {
   for _ in $(seq 50); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.1; done
@@ -11,7 +13,7 @@ wait_port() {
 }
 
 stop() {
-  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid; do
+  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid; do
     [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true
     rm -f "$p"
   done
@@ -45,6 +47,15 @@ CONF
     [ -f "$DIR/dropbear_host_ed25519" ] || dropbearkey -t ed25519 -f "$DIR/dropbear_host_ed25519" >/dev/null 2>&1
     dropbear -r "$DIR/dropbear_host_ed25519" -D "$DIR" -p "127.0.0.1:$DROPBEAR_PORT" -P "$DIR/dropbear.pid" -s -E 2>"$DIR/dropbear.log"
     wait_port "$DROPBEAR_PORT"
-  fi ;;
+  fi
+
+  mkdir -p "$FTP_DIR/root"
+  [ -x "$FTP_DIR/venv/bin/python3" ] || { python3 -m venv "$FTP_DIR/venv" && "$FTP_DIR/venv/bin/pip" install -q pyftpdlib pyopenssl; }
+  [ -f "$FTP_DIR/cert.pem" ] || openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=localhost \
+    -keyout "$FTP_DIR/key.pem" -out "$FTP_DIR/cert.pem" 2>/dev/null
+  "$FTP_DIR/venv/bin/python3" "$ROOT/scripts/ftp-server.py" "$FTP_PORT" "$FTP_DIR/root" "$(id -un)" macscp-ftp \
+    "$FTP_DIR/cert.pem" "$FTP_DIR/key.pem" >"$FTP_DIR/ftpd.log" 2>&1 &
+  echo $! > "$FTP_DIR/ftpd.pid"
+  wait_port "$FTP_PORT" ;;
 stop) stop ;;
 esac

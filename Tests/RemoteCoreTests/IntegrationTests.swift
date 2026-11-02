@@ -6,7 +6,8 @@ final class IntegrationTests: XCTestCase {
     struct Server {
         let name: String
         let port: Int
-        var protocols: [FileProtocol] = FileProtocol.allCases
+        var protocols: [FileProtocol] = [.sftp, .scp]
+        var password: String?
     }
 
     static let env = ProcessInfo.processInfo.environment
@@ -18,6 +19,12 @@ final class IntegrationTests: XCTestCase {
         var s = Server(name: String(p[0]), port: Int(p[1])!)
         if p.count > 2 { s.protocols = p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) } }
         return s
+    }
+    let ftpServers: [Server] = (env["MACSCP_TEST_FTP_SERVERS"] ?? "pyftpd:2121:ftp+ftps").split(separator: ",").map {
+        let p = $0.split(separator: ":")
+        return Server(name: String(p[0]), port: Int(p[1])!,
+                      protocols: p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) },
+                      password: env["MACSCP_TEST_FTP_PASSWORD"] ?? "macscp-ftp")
     }
     var scratch: URL!
 
@@ -38,7 +45,12 @@ final class IntegrationTests: XCTestCase {
         var kbdAnswer: String?
         var hostKeyQuestions: [HostKeyInfo] = []
         var passphraseAsked = 0
+        var certificateQuestions: [CertificateInfo] = []
         func verifyHostKey(_ info: HostKeyInfo) async -> HostKeyDecision { hostKeyQuestions.append(info); return hostKeyDecision }
+        func verifyCertificate(_ info: CertificateInfo) async -> HostKeyDecision {
+            certificateQuestions.append(info)
+            return hostKeyDecision
+        }
         func password(user: String, host: String) async -> String? { passwordAnswer }
         func passphrase(keyPath: String) async -> String? { passphraseAsked += 1; return passphraseAnswer }
         func keyboardInteractive(name: String, instruction: String, prompts: [InteractivePrompt]) async -> [String]? {
@@ -53,6 +65,8 @@ final class IntegrationTests: XCTestCase {
         p.useAgent = false
         p.useGSSAPI = false
         p.knownHostsPath = scratch.appendingPathComponent("known_hosts").path
+        p.trustedCertificatesPath = scratch.appendingPathComponent("trusted_certificates").path
+        p.password = s.password
         p.sshConfigPath = "/dev/null"
         return p
     }
@@ -62,9 +76,14 @@ final class IntegrationTests: XCTestCase {
         try await Session.connect(proto, p ?? parameters(s), prompter)
     }
 
+    func target(_ label: String) -> (Server, FileProtocol) {
+        let parts = label.split(separator: "/")
+        return ((servers + ftpServers).first { $0.name == parts[0] }!, FileProtocol(rawValue: String(parts[1]))!)
+    }
+
     func eachTarget(protocols: [FileProtocol] = FileProtocol.allCases,
                     _ body: (String, any RemoteFileSystem, String) async throws -> Void) async throws {
-        for s in servers {
+        for s in servers + ftpServers {
             for proto in protocols where s.protocols.contains(proto) {
                 let label = "\(s.name)/\(proto.rawValue)"
                 let fs = try await connect(s, proto)
@@ -125,21 +144,23 @@ final class IntegrationTests: XCTestCase {
 
             let sub = RemotePath.join(base, "sub dir")
             try await fs.makeDirectory(sub)
-            try await fs.createSymlink(RemotePath.join(base, "file-link"), target: renamed)
-            try await fs.createSymlink(RemotePath.join(base, "dir-link"), target: sub)
-            try await fs.createSymlink(RemotePath.join(base, "broken-link"), target: RemotePath.join(base, "nope"))
-            let entries = Dictionary(uniqueKeysWithValues: try await fs.list(base).map { ($0.name, $0) })
-            XCTAssertEqual(entries["file-link"]?.type, .symlink, label)
-            XCTAssertEqual(entries["file-link"]?.linkTarget, renamed, label)
-            XCTAssertEqual(entries["file-link"]?.targetType, .file, label)
-            XCTAssertEqual(entries["dir-link"]?.targetType, .directory, label)
-            XCTAssertEqual(entries["dir-link"]?.isDirectory, true, label)
-            XCTAssertNil(entries["broken-link"]?.targetType, label)
-            XCTAssertEqual(entries["sub dir"]?.type, .directory, label)
+            if !target(label).1.isFTP {
+                try await fs.createSymlink(RemotePath.join(base, "file-link"), target: renamed)
+                try await fs.createSymlink(RemotePath.join(base, "dir-link"), target: sub)
+                try await fs.createSymlink(RemotePath.join(base, "broken-link"), target: RemotePath.join(base, "nope"))
+                let entries = Dictionary(uniqueKeysWithValues: try await fs.list(base).map { ($0.name, $0) })
+                XCTAssertEqual(entries["file-link"]?.type, .symlink, label)
+                XCTAssertEqual(entries["file-link"]?.linkTarget, renamed, label)
+                XCTAssertEqual(entries["file-link"]?.targetType, .file, label)
+                XCTAssertEqual(entries["dir-link"]?.targetType, .directory, label)
+                XCTAssertEqual(entries["dir-link"]?.isDirectory, true, label)
+                XCTAssertNil(entries["broken-link"]?.targetType, label)
+                XCTAssertEqual(entries["sub dir"]?.type, .directory, label)
 
-            try await fs.delete(RemotePath.join(base, "dir-link"), isDirectory: false)
-            let subStill = try await fs.fileInfo(sub)
-            XCTAssertNotNil(subStill, label)
+                try await fs.delete(RemotePath.join(base, "dir-link"), isDirectory: false)
+                let subStill = try await fs.fileInfo(sub)
+                XCTAssertNotNil(subStill, label)
+            }
 
             let nested = RemotePath.join(sub, "deeper")
             try await fs.makeDirectory(nested)
@@ -196,7 +217,7 @@ final class IntegrationTests: XCTestCase {
     func testResume() async throws {
         let local = try randomFile("big.bin", size: 1_000_000)
         let data = try Data(contentsOf: local)
-        try await eachTarget(protocols: [.sftp]) { label, fs, base in
+        try await eachTarget(protocols: [.sftp, .ftp, .ftps, .ftpsImplicit]) { label, fs, base in
             let engine = TransferEngine(fs: fs, delegate: NonInteractiveTransferDelegate())
 
             let half = scratch.appendingPathComponent("half")

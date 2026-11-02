@@ -127,6 +127,8 @@ struct SiteManagerView: View {
     @Bindable var model: SiteManagerModel
     @State private var advanced = false
 
+    private var ftp: Bool { model.draft.fileProtocol.isFTP }
+
     var body: some View {
         HSplitView {
             List(model.tree, children: \.children, selection: Binding(get: { model.selection }, set: { model.select($0) })) { node in
@@ -139,33 +141,48 @@ struct SiteManagerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Form {
                     Section("Session") {
-                        Picker("File protocol", selection: $model.draft.fileProtocol) {
+                        Picker("File protocol", selection: Binding(get: { ftp ? .ftp : model.draft.fileProtocol },
+                                                                   set: { model.draft.fileProtocol = $0 })) {
                             Text("SFTP").tag(FileProtocol.sftp)
                             Text("SCP").tag(FileProtocol.scp)
+                            Text("FTP").tag(FileProtocol.ftp)
+                        }
+                        if ftp {
+                            Picker("Encryption", selection: $model.draft.fileProtocol) {
+                                Text("No encryption").tag(FileProtocol.ftp)
+                                Text("TLS/SSL Explicit encryption").tag(FileProtocol.ftps)
+                                Text("TLS/SSL Implicit encryption").tag(FileProtocol.ftpsImplicit)
+                            }
                         }
                         HStack {
                             TextField("Host name", text: $model.draft.host, prompt: Text("example.com"))
-                            TextField("Port", value: $model.draft.port, format: .number.grouping(.never), prompt: Text("22"))
+                            TextField("Port", value: $model.draft.port, format: .number.grouping(.never),
+                                      prompt: Text(model.draft.fileProtocol == .ftpsImplicit ? "990" : ftp ? "21" : "22"))
                                 .frame(width: 110)
                         }
-                        TextField("User name", text: $model.draft.user, prompt: Text("From ~/.ssh/config or local user"))
+                        TextField("User name", text: $model.draft.user,
+                                  prompt: Text(ftp ? "Anonymous" : "From ~/.ssh/config or local user"))
                         SecureField("Password", text: $model.password, prompt: Text("Optional"))
                         Toggle("Save password in Keychain", isOn: $model.savePassword)
                     }
                     DisclosureGroup("Advanced", isExpanded: $advanced) {
-                        HStack {
-                            TextField("Private key", text: Binding(get: { model.draft.privateKeyPath ?? "" },
-                                                                   set: { model.draft.privateKeyPath = $0.isEmpty ? nil : $0 }),
-                                      prompt: Text("Agent and default keys"))
-                            Button("Choose…") { model.chooseKey() }
+                        if !ftp {
+                            HStack {
+                                TextField("Private key", text: Binding(get: { model.draft.privateKeyPath ?? "" },
+                                                                       set: { model.draft.privateKeyPath = $0.isEmpty ? nil : $0 }),
+                                          prompt: Text("Agent and default keys"))
+                                Button("Choose…") { model.chooseKey() }
+                            }
+                            Toggle("Use ssh-agent", isOn: $model.draft.useAgent)
                         }
-                        Toggle("Use ssh-agent", isOn: $model.draft.useAgent)
                         TextField("Remote directory", text: $model.draft.remoteDirectory, prompt: Text("Home"))
                         TextField("Local directory", text: $model.draft.localDirectory, prompt: Text("Home"))
                         TextField("Site name", text: $model.draft.name, prompt: Text("user@host"))
                         TextField("Folder", text: $model.draft.folder, prompt: Text("e.g. Work/Production"))
-                        Text("Jump hosts, proxies and other options come from ~/.ssh/config.")
-                            .font(.caption).foregroundStyle(.secondary)
+                        if !ftp {
+                            Text("Jump hosts, proxies and other options come from ~/.ssh/config.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .formStyle(.grouped)

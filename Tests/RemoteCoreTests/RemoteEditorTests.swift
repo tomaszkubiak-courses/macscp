@@ -30,8 +30,7 @@ extension IntegrationTests {
             let remote = RemotePath.join(base, "notes.txt")
             try await fs.upload(seed, to: remote, offset: 0, progress: { _ in })
             try await fs.setPermissions(remote, Permissions(0o640))
-            let s = servers.first { label.hasPrefix($0.name) }!
-            let proto: FileProtocol = label.hasSuffix("scp") ? .scp : .sftp
+            let (s, proto) = target(label)
             let params = parameters(s)
             let answers = Answers()
             let editor = RemoteEditor(cacheRoot: scratch.appendingPathComponent("edit-\(UUID().uuidString)"),

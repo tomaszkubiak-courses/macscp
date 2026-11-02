@@ -32,9 +32,9 @@ docker run -d --name openssh74 -p 2225:22 -v "$KEYS:/keys:ro" debian:stretch sh 
   mkdir -p /run/sshd
   exec /usr/sbin/sshd -D -e -o PasswordAuthentication=yes"
 
-docker run -d --name proftpd -p 2226:22 -v "$KEYS:/keys:ro" debian:bookworm sh -c "
+docker run -d --name proftpd -p 2226:22 -p 2127:2127 -p 2128:2128 -p 30000-30019:30000-30019 -v "$KEYS:/keys:ro" debian:bookworm sh -c "
   apt-get update -q >/dev/null
-  DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends proftpd-core proftpd-mod-crypto openssh-client >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends proftpd-core proftpd-mod-crypto openssh-client ssl-cert >/dev/null
   useradd -m -s /bin/bash macscp && echo 'macscp:$PASSWORD' | chpasswd
   ssh-keygen -q -m PEM -t rsa -b 3072 -N '' -f /etc/proftpd/host_rsa
   ssh-keygen -q -m PEM -t ecdsa -N '' -f /etc/proftpd/host_ecdsa
@@ -55,10 +55,33 @@ LoadModule mod_sftp.c
     DefaultRoot ~
   </VirtualHost>
 </IfModule>
+LoadModule mod_tls.c
+<VirtualHost 0.0.0.0>
+  Port 2127
+  TLSEngine on
+  TLSRequired off
+  TLSRSACertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
+  TLSRSACertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+  PassivePorts 30000 30009
+  RequireValidShell off
+  AllowOverwrite on
+  DefaultRoot ~
+</VirtualHost>
+<VirtualHost 0.0.0.0>
+  Port 2128
+  TLSEngine on
+  TLSOptions UseImplicitSSL
+  TLSRSACertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
+  TLSRSACertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+  PassivePorts 30010 30019
+  RequireValidShell off
+  AllowOverwrite on
+  DefaultRoot ~
+</VirtualHost>
 CONF
   exec proftpd -n -q"
 
-for p in 2224 2225 2226; do
+for p in 2224 2225 2226 2127 2128; do
   for _ in $(seq 120); do (echo > /dev/tcp/127.0.0.1/$p) 2>/dev/null && break; sleep 1; done
 done
 sleep 3

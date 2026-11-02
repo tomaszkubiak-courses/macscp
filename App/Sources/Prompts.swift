@@ -100,6 +100,31 @@ final class UIPrompter: ConnectionPrompter {
         }
     }
 
+    func verifyCertificate(_ info: CertificateInfo) async -> HostKeyDecision {
+        await Alerts.serialized { [window] in
+            let a = NSAlert()
+            a.messageText = String(localized: "Continue connecting to a server with an untrusted certificate?")
+            a.informativeText = String(localized: """
+            The TLS certificate of \(info.host):\(String(info.port)) is not trusted: \(info.problem)
+
+            Subject: \(info.subject)
+            Issuer: \(info.issuer)
+            SHA-256 fingerprint:
+            \(info.fingerprint)
+
+            Only continue if you trust this server.
+            """)
+            a.addButton(withTitle: String(localized: "Accept"))
+            a.addButton(withTitle: String(localized: "Connect Once"))
+            a.addButton(withTitle: String(localized: "Cancel"))
+            switch await Alerts.run(a, in: window) {
+            case .alertFirstButtonReturn: return .acceptAndSave
+            case .alertSecondButtonReturn: return .acceptOnce
+            default: return .reject
+            }
+        }
+    }
+
     func password(user: String, host: String) async -> String? {
         await Alerts.ask(String(localized: "Password for \(user)@\(host)"), secure: true, in: window)
     }

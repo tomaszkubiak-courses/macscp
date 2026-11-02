@@ -91,6 +91,7 @@ extension IntegrationTests {
             let sub = try await fs.list(RemotePath.join(base, "looped/sub")).map(\.name).sorted()
             XCTAssertEqual(sub, ["f"], label)
 
+            if target(label).1.isFTP { return }
             let remoteLoop = RemotePath.join(base, "looped/sub/back")
             try await fs.createSymlink(remoteLoop, target: RemotePath.join(base, "looped"))
             let down = scratch.appendingPathComponent("loopdown-\(label.replacingOccurrences(of: "/", with: "-"))")

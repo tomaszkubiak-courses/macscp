@@ -72,7 +72,13 @@
     "*.txt; *.log | *.bak; .git/" : {
 
     },
+    "21" : {
+
+    },
     "22" : {
+
+    },
+    "990" : {
 
     },
     "Abort" : {
@@ -97,6 +103,9 @@
 
     },
     "Always" : {
+
+    },
+    "Anonymous" : {
 
     },
     "Applies to sessions opened after the change." : {
@@ -174,6 +183,9 @@
     "Connected" : {
 
     },
+    "Continue connecting to a server with an untrusted certificate?" : {
+
+    },
     "Continue connecting to an unknown server?" : {
 
     },
@@ -249,6 +261,9 @@
     "Enclosing Folder" : {
 
     },
+    "Encryption" : {
+
+    },
     "Enter Full Screen" : {
 
     },
@@ -259,6 +274,9 @@
 
     },
     "Existing files only" : {
+
+    },
+    "FTP" : {
 
     },
     "Failed: %@" : {
@@ -405,6 +423,9 @@
           }
         }
       }
+    },
+    "No encryption" : {
+
     },
     "No files are being edited. Choose Files > Edit on a remote file." : {
 
@@ -662,12 +683,28 @@
     "Synchronizing…" : {
 
     },
+    "TLS/SSL Explicit encryption" : {
+
+    },
+    "TLS/SSL Implicit encryption" : {
+
+    },
     "The %@ key of %@:%@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "The %1$@ key of %2$@:%3$@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%4$@"
+          }
+        }
+      }
+    },
+    "The TLS certificate of %@:%@ is not trusted: %@\n\nSubject: %@\nIssuer: %@\nSHA-256 fingerprint:\n%@\n\nOnly continue if you trust this server." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The TLS certificate of %1$@:%2$@ is not trusted: %3$@\n\nSubject: %4$@\nIssuer: %5$@\nSHA-256 fingerprint:\n%6$@\n\nOnly continue if you trust this server."
           }
         }
       }

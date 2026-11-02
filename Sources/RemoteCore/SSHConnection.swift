@@ -28,6 +28,8 @@ public struct ConnectionParameters: Sendable, Equatable {
 
     public var knownHostsPath: String?
 
+    public var trustedCertificatesPath: String?
+
     public var sshConfigPath: String?
     public var timeoutSeconds = 15
 
@@ -61,6 +63,7 @@ public struct InteractivePrompt: Sendable, Equatable {
 
 public protocol ConnectionPrompter: Sendable {
     func verifyHostKey(_ info: HostKeyInfo) async -> HostKeyDecision
+    func verifyCertificate(_ info: CertificateInfo) async -> HostKeyDecision
     func password(user: String, host: String) async -> String?
     func passphrase(keyPath: String) async -> String?
     func keyboardInteractive(name: String, instruction: String, prompts: [InteractivePrompt]) async -> [String]?

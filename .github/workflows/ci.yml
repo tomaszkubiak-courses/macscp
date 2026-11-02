@@ -14,7 +14,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Frameworks/CSSH.xcframework
-          key: cssh-${{ runner.os }}-xcode-latest-${{ hashFiles('scripts/build-cssh.sh') }}
+          key: cssh-${{ runner.os }}-xcode-latest-${{ hashFiles('scripts/build-cssh.sh', 'Sources/CSSHLinux/cssh.h') }}
       - name: Select newest Xcode
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
@@ -26,7 +26,7 @@ jobs:
         run: scripts/build-cssh.sh
       - name: Build
         run: swift build --build-tests
-      - name: Unit and integration tests (OpenSSH + Dropbear, key and agent auth)
+      - name: Unit and integration tests (OpenSSH + Dropbear, key and agent auth, FTP + FTPS)
         timeout-minutes: 20
         run: |
           scripts/test-servers.sh start
@@ -57,18 +57,18 @@ jobs:
         run: |
           apt-get update -q
           DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
-            cmake ninja-build libssl-dev zlib1g-dev curl xz-utils ca-certificates \
-            openssh-server openssh-client dropbear-bin netcat-openbsd gdb
+            cmake ninja-build libssl-dev libcurl4-openssl-dev zlib1g-dev curl xz-utils ca-certificates openssl \
+            openssh-server openssh-client dropbear-bin netcat-openbsd gdb python3-pyftpdlib python3-openssl
       - name: Build libssh
         run: scripts/build-cssh.sh
       - name: Start servers
         run: scripts/ci-linux-servers.sh
-      - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods)
+      - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods, FTP + FTPS)
         timeout-minutes: 20
         run: scripts/ci-run-tests.sh
       - name: Server logs
         if: failure()
-        run: for f in /tmp/dropbear.log /tmp/sshd.log; do echo "== $f"; tail -n 80 "$f"; done
+        run: for f in /tmp/dropbear.log /tmp/sshd.log /tmp/ftpd.log; do echo "== $f"; tail -n 80 "$f"; done
 
   servers:
     runs-on: ubuntu-24.04
@@ -78,16 +78,17 @@ jobs:
         env:
           MACSCP_TEST_PASSWORD: Test-pass-1
         run: scripts/ci-server-matrix.sh
-      - name: Integration tests (BusyBox, OpenSSH 7.4, ProFTPD)
+      - name: Integration tests (BusyBox, OpenSSH 7.4, ProFTPD SFTP, FTP and FTPS)
         timeout-minutes: 25
         run: |
           docker run --rm --network host --cap-add=SYS_PTRACE -v "$PWD:/src" -v /tmp/keys:/keys -w /src \
             -e MACSCP_INTEGRATION=1 -e MACSCP_TEST_USER=macscp -e MACSCP_TEST_PASSWORD=Test-pass-1 -e MACSCP_TEST_KEYS=/keys \
             -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp \
+            -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 \
             swift:6.2-noble bash -c '
               apt-get update -q >/dev/null &&
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build libssl-dev \
-                zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
+                libcurl4-openssl-dev zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
               scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
       - name: Server logs
         if: failure()

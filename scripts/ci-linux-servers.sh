@@ -24,6 +24,12 @@ ln -sf /usr/lib/openssh/sftp-server /usr/lib/sftp-server
 mkdir -p /etc/dropbear
 dropbear -F -E -R -p 2223 >/tmp/dropbear.log 2>&1 &
 
-for p in 2222 2223; do
+mkdir -p /tmp/ftp-root /tmp/ftp-cert
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=localhost \
+  -keyout /tmp/ftp-cert/key.pem -out /tmp/ftp-cert/cert.pem 2>/dev/null
+python3 "$(dirname "$0")/ftp-server.py" 2121 /tmp/ftp-root macscp macscp-ftp /tmp/ftp-cert/cert.pem /tmp/ftp-cert/key.pem \
+  >/tmp/ftpd.log 2>&1 &
+
+for p in 2222 2223 2121; do
   for _ in $(seq 50); do nc -z 127.0.0.1 $p && break; sleep 0.1; done
 done

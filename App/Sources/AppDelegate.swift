@@ -37,13 +37,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func debugConnect() -> Bool {
         let d = UserDefaults.standard
         guard let s = d.string(forKey: "MacSCPDebugConnect"), let url = URL(string: s), let host = url.host else { return false }
-        var site = Site(name: host, host: host, fileProtocol: url.scheme == "scp" ? .scp : .sftp, user: url.user ?? "")
+        var site = Site(name: host, host: host, fileProtocol: FileProtocol(rawValue: url.scheme ?? "") ?? .sftp, user: url.user ?? "")
         site.port = url.port
         site.privateKeyPath = d.string(forKey: "MacSCPDebugKey")
         site.remoteDirectory = url.path
         site.localDirectory = d.string(forKey: "MacSCPDebugLocal") ?? ""
         struct Accept: ConnectionPrompter {
             func verifyHostKey(_ info: HostKeyInfo) async -> HostKeyDecision { .acceptOnce }
+            func verifyCertificate(_ info: CertificateInfo) async -> HostKeyDecision { .acceptOnce }
             func password(user: String, host: String) async -> String? { nil }
             func passphrase(keyPath: String) async -> String? { nil }
             func keyboardInteractive(name: String, instruction: String, prompts: [InteractivePrompt]) async -> [String]? { nil }
@@ -52,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             let delegate = UITransferDelegate()
             do {
-                let session = try await Session.open(site: site, password: nil, prompter: Accept(), transferDelegate: delegate)
+                let session = try await Session.open(site: site, password: d.string(forKey: "MacSCPDebugPassword"), prompter: Accept(), transferDelegate: delegate)
                 open(session, transferDelegate: delegate)
                 NSApp.activate()
                 if let edit = d.string(forKey: "MacSCPDebugEdit") { commanders.last?.edit([edit], with: nil) }
