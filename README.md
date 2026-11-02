@@ -137,8 +137,9 @@ CI runs the integration suite against:
 
 ## Roadmap
 
-- **Next:** toward 1.0: testing with more FTP servers and S3 providers, and a full VoiceOver pass.
-- **Later:** WebDAV, an internal text editor, importing WinSCP sites and PuTTY keys, and translations.
+- **Next:** protocol fixes: file times on FTP servers without MFMT, S3 content types, and renaming S3 objects over 5 GB.
+- **Then, in order:** importing WinSCP sites and PuTTY keys; Find files and Compare directories; an internal text editor; custom commands and a console; WebDAV; text-mode transfers, owner and group editing, and more synchronization options; translations.
+- **1.0** follows after testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass.
 
 ## Relationship to WinSCP
 
