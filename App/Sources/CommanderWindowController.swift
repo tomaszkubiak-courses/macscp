@@ -356,7 +356,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     func showProperties(_ items: [PaneItem], in pane: FilePaneViewController) {
         let model = PropertiesModel(items: items, directory: pane.path, isRemote: pane.isRemote)
-        let host = NSHostingController(rootView: PropertiesView(model: model, done: { [weak self, weak pane] apply in
+        let host = NSHostingController(rootView: PropertiesView(model: model, canChangeOwner: pane.source.canChangeOwner, done: { [weak self, weak pane] apply in
             guard let self, let sheetWindow = self.window?.attachedSheet else { return }
             self.window?.endSheet(sheetWindow)
             guard apply, let pane else { return }

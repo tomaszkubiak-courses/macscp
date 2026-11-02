@@ -26,6 +26,8 @@ protocol PaneSource: AnyObject {
     func delete(_ path: String, isDirectory: Bool) async throws
     func rename(_ path: String, to: String) async throws
     func setPermissions(_ path: String, _ mode: UInt16) async throws
+    var canChangeOwner: Bool { get }
+    func setOwner(_ path: String, owner: String?, group: String?) async throws
 }
 
 @MainActor
@@ -88,6 +90,15 @@ final class LocalSource: PaneSource {
     func setPermissions(_ path: String, _ mode: UInt16) async throws {
         try FileManager.default.setAttributes([.posixPermissions: NSNumber(value: mode)], ofItemAtPath: path)
     }
+
+    var canChangeOwner: Bool { true }
+
+    func setOwner(_ path: String, owner: String?, group: String?) async throws {
+        var a: [FileAttributeKey: Any] = [:]
+        if let owner { a[.ownerAccountName] = owner }
+        if let group { a[.groupOwnerAccountName] = group }
+        try FileManager.default.setAttributes(a, ofItemAtPath: path)
+    }
 }
 
 @MainActor
@@ -114,6 +125,12 @@ final class RemoteSource: PaneSource {
     func rename(_ path: String, to: String) async throws { try await session.browse { try await $0.rename(path, to: to) } }
     func setPermissions(_ path: String, _ mode: UInt16) async throws {
         try await session.browse { try await $0.setPermissions(path, Permissions(mode)) }
+    }
+
+    var canChangeOwner: Bool { session.site.fileProtocol.isSSH }
+
+    func setOwner(_ path: String, owner: String?, group: String?) async throws {
+        try await session.browse { try await $0.setOwner(path, owner: owner, group: group) }
     }
 }
 

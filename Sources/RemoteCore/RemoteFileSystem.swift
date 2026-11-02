@@ -18,6 +18,8 @@ public protocol RemoteFileSystem: Actor {
     func rename(_ path: String, to newPath: String) async throws
     func setPermissions(_ path: String, _ permissions: Permissions) async throws
     func setModified(_ path: String, _ date: Date) async throws
+    func setOwner(_ path: String, owner: String?, group: String?) async throws
+    nonisolated var supportsOwnership: Bool { get }
     func createSymlink(_ path: String, target: String) async throws
 
     func download(_ path: String, to local: URL, offset: Int64, progress: ProgressHandler) async throws
@@ -30,6 +32,21 @@ public protocol RemoteFileSystem: Actor {
 
 extension RemoteFileSystem {
     public nonisolated var uploadsInPlace: Bool { false }
+    public nonisolated var supportsOwnership: Bool { false }
+
+    public func setOwner(_ path: String, owner: String?, group: String?) async throws {
+        throw RemoteError(.unsupported, "Cannot change the owner of \(path) over this protocol.")
+    }
+}
+
+func chownCommand(_ path: String, owner: String?, group: String?) -> String? {
+    let target = RemotePath.shellQuote(path)
+    switch (owner, group) {
+    case let (o?, g?): return "PATH=$PATH:/usr/sbin:/sbin chown \(RemotePath.shellQuote(o + ":" + g)) \(target)"
+    case let (o?, nil): return "PATH=$PATH:/usr/sbin:/sbin chown \(RemotePath.shellQuote(o)) \(target)"
+    case let (nil, g?): return "PATH=$PATH:/usr/sbin:/sbin chgrp \(RemotePath.shellQuote(g)) \(target)"
+    default: return nil
+    }
 }
 
 func localError(_ url: URL, _ error: Error) -> RemoteError {

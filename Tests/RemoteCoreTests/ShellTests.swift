@@ -47,3 +47,25 @@ extension IntegrationTests {
         }
     }
 }
+
+extension IntegrationTests {
+    func testChangeOwnerAndGroup() async throws {
+        let local = try randomFile("own.txt", size: 10)
+        try await eachTarget(protocols: [.sftp, .scp]) { label, fs, base in
+            let path = RemotePath.join(base, "own.txt")
+            try await fs.upload(local, to: path, offset: 0, progress: { _ in })
+            guard let before = try await fs.fileInfo(path) else { return XCTFail(label) }
+            try await fs.setOwner(path, owner: nil, group: before.group)
+            try await fs.setOwner(path, owner: before.owner, group: before.group)
+            let after = try await fs.fileInfo(path)
+            XCTAssertEqual(after?.owner, before.owner, label)
+            XCTAssertEqual(after?.group, before.group, label)
+            do {
+                try await fs.setOwner(path, owner: "macscp-no-such-user", group: nil)
+                XCTFail("\(label): unknown user accepted")
+            } catch let e as RemoteError {
+                XCTAssertNotEqual(e.kind, .connection, "\(label): \(e)")
+            }
+        }
+    }
+}

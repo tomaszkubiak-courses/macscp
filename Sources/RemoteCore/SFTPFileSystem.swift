@@ -166,6 +166,27 @@ public actor SFTPFileSystem: RemoteFileSystem {
         guard sftp_utimes(try session, path, times) == SSH_OK else { throw error("set time of", path) }
     }
 
+    public nonisolated var supportsOwnership: Bool { true }
+
+    public func setOwner(_ path: String, owner: String?, group: String?) throws {
+        guard owner != nil || group != nil else { return }
+        let uid = owner.flatMap { UInt32($0) }, gid = group.flatMap { UInt32($0) }
+        if (owner == nil || uid != nil) && (group == nil || gid != nil) {
+            let s = try session
+            guard let a = sftp_stat(s, path) else { throw error("change the owner of", path) }
+            let current = a.pointee
+            sftp_attributes_free(a)
+            guard sftp_chown(s, path, uid ?? current.uid, gid ?? current.gid) == SSH_OK else { throw error("change the owner of", path) }
+            return
+        }
+        let r = try ssh.runShell(chownCommand(path, owner: owner, group: group)!, in: "/")
+        guard r.exitCode == 0 else {
+            let msg = r.errorOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            throw RemoteError(msg.contains("ermission") || msg.contains("not permitted") ? .permissionDenied : .failure,
+                              "Cannot change the owner of \(path): \(msg.isEmpty ? "exit code \(r.exitCode)" : msg)")
+        }
+    }
+
     public func createSymlink(_ path: String, target: String) throws {
         let s = try session
         var reversed = false

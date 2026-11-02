@@ -113,6 +113,13 @@ public actor SCPFileSystem: RemoteFileSystem {
         try run("touch -t \(f.string(from: date)) \(q(path))", "set time of", path)
     }
 
+    public nonisolated var supportsOwnership: Bool { true }
+
+    public func setOwner(_ path: String, owner: String?, group: String?) throws {
+        guard let command = chownCommand(path, owner: owner, group: group) else { return }
+        try run(command, "change the owner of", path)
+    }
+
     public func createSymlink(_ path: String, target: String) throws {
         try run("ln -s \(q(target)) \(q(path))", "create link", path)
     }
