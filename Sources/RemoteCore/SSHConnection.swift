@@ -107,10 +107,19 @@ final class SSHConnection {
         return String(cString: s)
     }
 
+    static let publicKeyAlgorithms = [
+        "ssh-ed25519-cert-v01@openssh.com", "ecdsa-sha2-nistp521-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp384-cert-v01@openssh.com", "ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com", "rsa-sha2-512-cert-v01@openssh.com", "rsa-sha2-256-cert-v01@openssh.com",
+        "ssh-ed25519", "ecdsa-sha2-nistp521", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp256",
+        "sk-ssh-ed25519@openssh.com", "sk-ecdsa-sha2-nistp256@openssh.com", "rsa-sha2-512", "rsa-sha2-256", "ssh-rsa",
+    ].joined(separator: ",")
+
     func connect(prompter: any ConnectionPrompter,
                  isolation: isolated (any Actor)? = #isolation) async throws {
         let p = parameters
         ssh_options_set(session, SSH_OPTIONS_HOST, p.host)
+        ssh_options_set(session, SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES, Self.publicKeyAlgorithms)
 
         if ssh_options_parse_config(session, p.sshConfigPath) != SSH_OK {
             throw RemoteError(.connection, "Cannot read SSH config: \(lastError)")

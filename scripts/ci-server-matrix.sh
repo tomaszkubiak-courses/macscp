@@ -31,7 +31,7 @@ docker run -d --name openssh74 -p 2225:22 -v "$KEYS:/keys:ro" debian:stretch sh 
   useradd -m -s /bin/bash macscp && echo 'macscp:$PASSWORD' | chpasswd
   $USER_SETUP
   mkdir -p /run/sshd
-  exec /usr/sbin/sshd -D -e -o PasswordAuthentication=yes -o LogLevel=DEBUG2"
+  exec /usr/sbin/sshd -D -e -o PasswordAuthentication=yes"
 
 docker run -d --name proftpd -p 2226:22 -p 2127:2127 -p 2128:2128 -p 30000-30019:30000-30019 -v "$KEYS:/keys:ro" debian:bookworm sh -c "
   apt-get update -q >/dev/null
