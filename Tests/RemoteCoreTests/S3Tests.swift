@@ -17,6 +17,8 @@ final class S3ParsingTests: XCTestCase {
         XCTAssertEqual(xml.records.map(\.tag), ["Contents", "CommonPrefixes"])
         XCTAssertEqual(xml.records[0].fields["Key"], "a & b.txt")
         XCTAssertEqual(S3FileSystem.md5(Data("hello".utf8)), "XUFAKrxLKna5cZ2REBfFkg==")
+        XCTAssertEqual(S3FileSystem.contentType("site/Index.HTML"), "text/html")
+        XCTAssertEqual(S3FileSystem.contentType("dir/noext"), "application/octet-stream")
     }
 
     func testCredentialsFile() throws {
@@ -38,7 +40,7 @@ extension IntegrationTests {
         let big = try randomFile("multi.bin", size: 12 << 20)
         for s in s3Servers {
             let fs = try await connect(s, s.protocols[0]) as! S3FileSystem
-            await fs.setMultipart(threshold: 6 << 20, partSize: 5 << 20)
+            await fs.setMultipart(threshold: 6 << 20, partSize: 5 << 20, copyThreshold: 6 << 20, copyPartSize: 5 << 20)
             let bucket = "/macscp-b-\(UUID().uuidString.prefix(8).lowercased())"
             try await fs.makeDirectory(bucket)
             let buckets = try await fs.list("/").map(\.name)

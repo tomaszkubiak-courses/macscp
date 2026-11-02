@@ -9,6 +9,7 @@ final class IntegrationTests: XCTestCase {
         var protocols: [FileProtocol] = [.sftp, .scp]
         var password: String?
         var home: String?
+        var coarseListingTimes = false
     }
 
     static let env = ProcessInfo.processInfo.environment
@@ -23,9 +24,11 @@ final class IntegrationTests: XCTestCase {
     }
     let ftpServers: [Server] = (env["MACSCP_TEST_FTP_SERVERS"] ?? "pyftpd:2121:ftp+ftps").split(separator: ",").map {
         let p = $0.split(separator: ":")
-        return Server(name: String(p[0]), port: Int(p[1])!,
-                      protocols: p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) },
-                      password: env["MACSCP_TEST_FTP_PASSWORD"] ?? "macscp-ftp")
+        var s = Server(name: String(p[0]), port: Int(p[1])!,
+                       protocols: p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) },
+                       password: env["MACSCP_TEST_FTP_PASSWORD"] ?? "macscp-ftp")
+        s.coarseListingTimes = p.count > 3 && p[3] == "coarse"
+        return s
     }
     let s3Servers: [Server] = (env["MACSCP_TEST_S3_SERVERS"] ?? "rclone:9000:s3http,rclone-tls:9001:s3").split(separator: ",").map {
         let p = $0.split(separator: ":")

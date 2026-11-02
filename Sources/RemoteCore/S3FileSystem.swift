@@ -23,6 +23,8 @@ public actor S3FileSystem: RemoteFileSystem {
     private var regions: [String: String] = [:]
     var multipartThreshold: Int64 = 64 << 20
     var partSize: Int64 = 16 << 20
+    var copyThreshold: Int64 = 5 << 30
+    var copyPartSize: Int64 = 512 << 20
 
     private init(_ parameters: ConnectionParameters, _ proto: FileProtocol) {
         self.parameters = parameters
@@ -44,9 +46,11 @@ public actor S3FileSystem: RemoteFileSystem {
 
     deinit { if let curl { curl_easy_cleanup(curl) } }
 
-    func setMultipart(threshold: Int64, partSize: Int64) {
+    func setMultipart(threshold: Int64, partSize: Int64, copyThreshold: Int64? = nil, copyPartSize: Int64? = nil) {
         multipartThreshold = threshold
         self.partSize = partSize
+        if let copyThreshold { self.copyThreshold = copyThreshold }
+        if let copyPartSize { self.copyPartSize = copyPartSize }
     }
 
     private func start(prompter: any ConnectionPrompter) async throws {
@@ -251,12 +255,12 @@ public actor S3FileSystem: RemoteFileSystem {
         } while token != nil
     }
 
-    private func keys(_ bucket: String, under prefix: String, path: String) throws -> [String] {
-        var keys: [String] = []
+    private func objects(_ bucket: String, under prefix: String, path: String) throws -> [(key: String, size: Int64)] {
+        var objects: [(key: String, size: Int64)] = []
         try listObjects(bucket, prefix: prefix, delimiter: false, what: "list", path: path) { tag, fields in
-            if tag == "Contents", let k = fields["Key"] { keys.append(k) }
+            if tag == "Contents", let k = fields["Key"] { objects.append((k, Int64(fields["Size"] ?? "") ?? 0)) }
         }
-        return keys
+        return objects
     }
 
     public func fileInfo(_ path: String) throws -> RemoteFile? {
@@ -296,7 +300,7 @@ public actor S3FileSystem: RemoteFileSystem {
             try send("DELETE", bucket, key, what: "delete", path: path)
             return
         }
-        try deleteObjects(bucket, try keys(bucket, under: key.isEmpty ? "" : key + "/", path: path), path: path)
+        try deleteObjects(bucket, try objects(bucket, under: key.isEmpty ? "" : key + "/", path: path).map(\.key), path: path)
         if key.isEmpty {
             try send("DELETE", bucket, what: "delete bucket", path: path)
             regions[bucket] = nil
@@ -325,18 +329,55 @@ public actor S3FileSystem: RemoteFileSystem {
         }
         guard let info = try fileInfo(path) else { throw RemoteError(.noSuchFile, "Cannot rename \(path): No such file or directory") }
         if !info.isDirectory {
-            try copy(from, fromKey, to, toKey, path)
+            try copy(from, fromKey, size: info.size, to, toKey, path)
             try send("DELETE", from, fromKey, what: "rename", path: path)
             return
         }
-        let all = try keys(from, under: fromKey + "/", path: path)
-        for k in all { try copy(from, k, to, toKey + "/" + k.dropFirst(fromKey.count + 1), path) }
-        try deleteObjects(from, all, path: path)
+        let all = try objects(from, under: fromKey + "/", path: path)
+        for o in all { try copy(from, o.key, size: o.size, to, toKey + "/" + o.key.dropFirst(fromKey.count + 1), path) }
+        try deleteObjects(from, all.map(\.key), path: path)
     }
 
-    private func copy(_ from: String, _ fromKey: String, _ to: String, _ toKey: String, _ path: String) throws {
-        let source = "/" + Curl.encode(from) + "/" + fromKey.split(separator: "/", omittingEmptySubsequences: false).map { Curl.encode($0) }.joined(separator: "/")
-        try send("PUT", to, toKey, headers: ["x-amz-copy-source: \(source)"], what: "rename", path: path)
+    private func copy(_ from: String, _ fromKey: String, size: Int64, _ to: String, _ toKey: String, _ path: String) throws {
+        let source = "x-amz-copy-source: /" + Curl.encode(from) + "/"
+            + fromKey.split(separator: "/", omittingEmptySubsequences: false).map { Curl.encode($0) }.joined(separator: "/")
+        guard size > copyThreshold else {
+            try send("PUT", to, toKey, headers: [source], what: "rename", path: path)
+            return
+        }
+        let type = try send("HEAD", from, fromKey, what: "rename", path: path).header("content-type") ?? Self.contentType(toKey)
+        try multipart(to, toKey, contentType: type, path: path) { id in
+            let chunk = max(copyPartSize, (size + 9_999) / 10_000)
+            var etags: [String] = []
+            for start in stride(from: Int64(0), to: size, by: Int(chunk)) {
+                let x = try send("PUT", to, toKey, query: [("partNumber", String(etags.count + 1)), ("uploadId", id)],
+                                 headers: [source, "x-amz-copy-source-range: bytes=\(start)-\(min(start + chunk, size) - 1)"],
+                                 what: "rename", path: path)
+                guard let etag = S3XML(x.body).top["ETag"] else { throw RemoteError(.failure, "Cannot rename \(path): a part has no ETag.") }
+                etags.append(etag)
+            }
+            return etags
+        }
+    }
+
+    private func multipart(_ bucket: String, _ key: String, contentType: String, path: String,
+                           _ parts: (String) throws -> [String]) throws {
+        let started = try send("POST", bucket, key, query: [("uploads", "")], headers: ["Content-Type: \(contentType)"],
+                               what: "upload", path: path)
+        guard let id = S3XML(started.body).top["UploadId"] else {
+            throw RemoteError(.failure, "Cannot upload \(path): the server did not start a multipart upload.")
+        }
+        do {
+            let list = try parts(id).enumerated().map { "<Part><PartNumber>\($0.offset + 1)</PartNumber><ETag>\(Self.escape($0.element))</ETag></Part>" }
+            let body = Data(("<CompleteMultipartUpload>" + list.joined() + "</CompleteMultipartUpload>").utf8)
+            try send("POST", bucket, key, query: [("uploadId", id)], headers: ["Content-Type: application/xml"],
+                     body: body, what: "upload", path: path)
+        } catch {
+            _ = try? send("DELETE", bucket, key, query: [("uploadId", id)], what: "abort upload of", path: path) { _, x in
+                x.cancellable = false
+            }
+            throw error
+        }
     }
 
     public func setPermissions(_ path: String, _ permissions: Permissions) throws {
@@ -402,35 +443,26 @@ public actor S3FileSystem: RemoteFileSystem {
                 }
                 x.progress = { progress(base + $0) }
             }
+            let type = Self.contentType(key)
             if size < multipartThreshold {
-                try send("PUT", bucket, key, what: "upload", path: path) { part($0, $1, length: size, base: 0) }
+                try send("PUT", bucket, key, headers: ["Content-Type: \(type)"], what: "upload", path: path) {
+                    part($0, $1, length: size, base: 0)
+                }
                 return
             }
-            let started = try send("POST", bucket, key, query: [("uploads", "")], what: "upload", path: path)
-            guard let id = S3XML(started.body).top["UploadId"] else {
-                throw RemoteError(.failure, "Cannot upload \(path): the server did not start a multipart upload.")
-            }
-            do {
-                let size = size
+            try multipart(bucket, key, contentType: type, path: path) { id in
                 let chunk = max(partSize, (size + 9_999) / 10_000)
-                var parts: [String] = []
+                var etags: [String] = []
                 var done: Int64 = 0
                 while done < size {
                     let length = min(chunk, size - done)
-                    let x = try send("PUT", bucket, key, query: [("partNumber", String(parts.count + 1)), ("uploadId", id)],
+                    let x = try send("PUT", bucket, key, query: [("partNumber", String(etags.count + 1)), ("uploadId", id)],
                                      what: "upload", path: path) { part($0, $1, length: length, base: done) }
                     guard let etag = x.header("etag") else { throw RemoteError(.failure, "Cannot upload \(path): a part has no ETag.") }
-                    parts.append("<Part><PartNumber>\(parts.count + 1)</PartNumber><ETag>\(Self.escape(etag))</ETag></Part>")
+                    etags.append(etag)
                     done += length
                 }
-                let body = Data(("<CompleteMultipartUpload>" + parts.joined() + "</CompleteMultipartUpload>").utf8)
-                try send("POST", bucket, key, query: [("uploadId", id)], headers: ["Content-Type: application/xml"],
-                         body: body, what: "upload", path: path)
-            } catch {
-                _ = try? send("DELETE", bucket, key, query: [("uploadId", id)], what: "abort upload of", path: path) { _, x in
-                    x.cancellable = false
-                }
-                throw error
+                return etags
             }
         }
     }
@@ -440,6 +472,20 @@ public actor S3FileSystem: RemoteFileSystem {
     public func disconnect() {
         if let curl { curl_easy_cleanup(curl) }
         curl = nil
+    }
+
+    static let contentTypes: [String: String] = [
+        "html": "text/html", "htm": "text/html", "css": "text/css", "js": "text/javascript", "mjs": "text/javascript",
+        "json": "application/json", "xml": "application/xml", "txt": "text/plain", "csv": "text/csv", "md": "text/markdown",
+        "svg": "image/svg+xml", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
+        "webp": "image/webp", "avif": "image/avif", "ico": "image/vnd.microsoft.icon", "pdf": "application/pdf",
+        "zip": "application/zip", "gz": "application/gzip", "tar": "application/x-tar", "wasm": "application/wasm",
+        "mp4": "video/mp4", "webm": "video/webm", "mp3": "audio/mpeg", "wav": "audio/wav", "woff": "font/woff",
+        "woff2": "font/woff2", "ttf": "font/ttf", "otf": "font/otf", "webmanifest": "application/manifest+json",
+    ]
+
+    static func contentType(_ key: String) -> String {
+        contentTypes[(RemotePath.name(key) as NSString).pathExtension.lowercased()] ?? "application/octet-stream"
     }
 
     static func escape(_ s: String) -> String {

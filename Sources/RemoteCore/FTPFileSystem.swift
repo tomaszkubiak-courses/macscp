@@ -16,7 +16,8 @@ public actor FTPFileSystem: RemoteFileSystem {
     private var home = "/"
     private var mlsd = true
     private var mlst = true
-    private var mfmt = true
+    private var timeCommand: String? = "MFMT"
+    private var mdtm = true
     private var factsSent = false
 
     private init(_ parameters: ConnectionParameters, _ proto: FileProtocol) {
@@ -195,10 +196,36 @@ public actor FTPFileSystem: RemoteFileSystem {
             }
         }
         do {
-            return try list(RemotePath.parent(path)).first { $0.name == RemotePath.name(path) }
+            guard var f = try list(RemotePath.parent(path)).first(where: { $0.name == RemotePath.name(path) }) else { return nil }
+            if f.type == .file, mdtm, let t = try modifiedTime(path) { f.modified = t }
+            return f
         } catch let e as RemoteError where e.kind == .noSuchFile {
             return nil
         }
+    }
+
+    private func modifiedTime(_ path: String) throws -> Date? {
+        do {
+            let x = try command(["MDTM \(path)"], "read time of", path)
+            return x.replies.last { $0.hasPrefix("213 ") }.flatMap { Self.time($0.dropFirst(4)) }
+        } catch let e as RemoteError where e.kind == .unsupported {
+            mdtm = false
+            return nil
+        }
+    }
+
+    static func time(_ s: Substring) -> Date? {
+        let d = Array(s.utf8.prefix(14)).map { Int32($0) - 48 }
+        guard d.count == 14, d.allSatisfy({ (0...9).contains($0) }) else { return nil }
+        func n(_ r: Range<Int>) -> Int32 { d[r].reduce(0) { $0 * 10 + $1 } }
+        var t = tm()
+        t.tm_year = n(0..<4) - 1900
+        t.tm_mon = n(4..<6) - 1
+        t.tm_mday = n(6..<8)
+        t.tm_hour = n(8..<10)
+        t.tm_min = n(10..<12)
+        t.tm_sec = n(12..<14)
+        return Date(timeIntervalSince1970: TimeInterval(timegm(&t)))
     }
 
     static func facts(_ line: String) -> (RemoteFile, String)? {
@@ -221,18 +248,7 @@ public actor FTPFileSystem: RemoteFileSystem {
             }
         }
         f.size = Int64(facts["size"] ?? facts["sizd"] ?? "") ?? 0
-        if let m = facts["modify"], m.count >= 14 {
-            let d = Array(m.utf8.prefix(14)).map { Int32($0) - 48 }
-            func n(_ r: Range<Int>) -> Int32 { d[r].reduce(0) { $0 * 10 + $1 } }
-            var t = tm()
-            t.tm_year = n(0..<4) - 1900
-            t.tm_mon = n(4..<6) - 1
-            t.tm_mday = n(6..<8)
-            t.tm_hour = n(8..<10)
-            t.tm_min = n(10..<12)
-            t.tm_sec = n(12..<14)
-            if d.allSatisfy({ (0...9).contains($0) }) { f.modified = Date(timeIntervalSince1970: TimeInterval(timegm(&t))) }
-        }
+        if let m = facts["modify"] { f.modified = time(Substring(m)) }
         if let mode = facts["unix.mode"], let p = Permissions(octal: mode.replacingOccurrences(of: "0o", with: "")) { f.permissions = p }
         f.owner = facts["unix.owner"] ?? facts["unix.uid"] ?? ""
         f.group = facts["unix.group"] ?? facts["unix.gid"] ?? ""
@@ -261,16 +277,19 @@ public actor FTPFileSystem: RemoteFileSystem {
     }
 
     public func setModified(_ path: String, _ date: Date) throws {
-        guard mfmt else { return }
+        guard let verb = timeCommand else { return }
         var t = time_t(date.timeIntervalSince1970)
         var parts = tm()
         gmtime_r(&t, &parts)
         let stamp = String(format: "%04d%02d%02d%02d%02d%02d", parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
                            parts.tm_hour, parts.tm_min, parts.tm_sec)
         do {
-            try command(["MFMT \(stamp) \(path)"], "set time of", path)
-        } catch let e as RemoteError where e.kind == .unsupported {
-            mfmt = false
+            try command(["\(verb) \(stamp) \(path)"], "set time of", path)
+        } catch let e as RemoteError where e.kind == .unsupported && verb == "MFMT" {
+            timeCommand = "MDTM"
+            try setModified(path, date)
+        } catch let e as RemoteError where verb == "MDTM" && e.kind != .connection && e.kind != .cancelled {
+            timeCommand = nil
         }
     }
 

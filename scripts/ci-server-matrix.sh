@@ -85,7 +85,34 @@ LoadModule mod_tls.c
 CONF
   exec proftpd -n -q"
 
-for p in 2224 2225 2226 2127 2128; do
+docker run -d --name vsftpd -p 2129:21 -p 30020-30029:30020-30029 debian:bookworm sh -c "
+  apt-get update -q >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends vsftpd ssl-cert >/dev/null
+  useradd -m -s /bin/bash macscp && echo 'macscp:$PASSWORD' | chpasswd
+  mkdir -p /var/run/vsftpd/empty
+  cat > /etc/vsftpd.conf <<CONF
+listen=YES
+listen_ipv6=NO
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+seccomp_sandbox=NO
+pasv_min_port=30020
+pasv_max_port=30029
+secure_chroot_dir=/var/run/vsftpd/empty
+pam_service_name=vsftpd
+utf8_filesystem=YES
+ssl_enable=YES
+allow_anon_ssl=NO
+force_local_logins_ssl=NO
+force_local_data_ssl=NO
+rsa_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+rsa_private_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+CONF
+  exec vsftpd /etc/vsftpd.conf"
+
+for p in 2224 2225 2226 2127 2128 2129; do
   for _ in $(seq 120); do (echo > /dev/tcp/127.0.0.1/$p) 2>/dev/null && break; sleep 1; done
 done
 sleep 3
