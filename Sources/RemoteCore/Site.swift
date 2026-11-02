@@ -39,6 +39,7 @@ public struct Site: Codable, Sendable, Hashable, Identifiable {
     public var localDirectory = ""
     public var region: String?
     public var ftpActiveMode: Bool?
+    public var remoteCRLF: Bool?
     public var proxy: Proxy?
 
     public init(name: String, host: String, fileProtocol: FileProtocol = .sftp, user: String = "") {

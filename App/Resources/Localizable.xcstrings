@@ -132,7 +132,13 @@
     "Ask before overwriting files" : {
 
     },
+    "Automatic" : {
+
+    },
     "Back" : {
+
+    },
+    "Binary" : {
 
     },
     "Both" : {
@@ -790,6 +796,9 @@
     "Server message" : {
 
     },
+    "Server uses Windows line endings (CRLF) for text transfers" : {
+
+    },
     "Server version kept" : {
 
     },
@@ -907,6 +916,9 @@
     "TLS/SSL Implicit encryption" : {
 
     },
+    "Text (convert line endings)" : {
+
+    },
     "Text of %@" : {
 
     },
@@ -956,6 +968,12 @@
 
     },
     "This session has no command line.\n" : {
+
+    },
+    "Transfer as text" : {
+
+    },
+    "Transfer mode" : {
 
     },
     "Transfer of “%@” failed" : {

@@ -16,6 +16,7 @@ public actor TransferQueue {
     public typealias Connect = @Sendable () async throws -> any RemoteFileSystem
 
     public var maxParallel: Int
+    public var remoteCRLF = false
     private let connect: Connect
     private let delegate: any TransferDelegate
     private var onChange: @Sendable ([QueueItem]) -> Void
@@ -36,6 +37,8 @@ public actor TransferQueue {
         handler(items)
     }
 
+    public func setRemoteCRLF(_ on: Bool) { remoteCRLF = on }
+
     public func setMaxParallel(_ n: Int) {
         maxParallel = max(1, n)
         schedule()
@@ -45,6 +48,8 @@ public actor TransferQueue {
 
     @discardableResult
     public func add(_ request: TransferRequest) -> UUID {
+        var request = request
+        if remoteCRLF { request.options.remoteCRLF = true }
         let item = QueueItem(id: UUID(), request: request)
         items.append(item)
         changed()

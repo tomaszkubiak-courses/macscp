@@ -82,3 +82,50 @@ final class FileMaskTests: XCTestCase {
         XCTAssertEqual(decoded, o)
     }
 }
+
+final class TextModeTests: XCTestCase {
+    func testConversionAndMask() {
+        XCTAssertEqual(TransferOptions.convertLineEndings(Data("a\r\nb\rc\nd".utf8), crlf: false), Data("a\nb\nc\nd".utf8))
+        XCTAssertEqual(TransferOptions.convertLineEndings(Data("a\r\nb\rc\n".utf8), crlf: true), Data("a\r\nb\r\nc\r\n".utf8))
+        var o = TransferOptions()
+        XCTAssertFalse(o.isText("index.html"))
+        o.mode = .automatic
+        XCTAssertTrue(o.isText("index.html"))
+        XCTAssertTrue(o.isText(".htaccess"))
+        XCTAssertFalse(o.isText("photo.jpg"))
+        XCTAssertFalse(o.allowsResume(size: 10 << 20, fileName: "big.txt"))
+        let old = try! JSONDecoder().decode(TransferOptions.self, from: Data(#"{"preserveTime":false}"#.utf8))
+        XCTAssertFalse(old.preserveTime)
+        XCTAssertEqual(old.mode, .binary)
+    }
+}
+
+extension IntegrationTests {
+    func testTextModeTransfers() async throws {
+        let dir = scratch.appendingPathComponent("text-\(UUID().uuidString.prefix(6))")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data("one\r\ntwo\r\n".utf8).write(to: dir.appendingPathComponent("notes.txt"))
+        try await eachTarget(protocols: [.sftp, .ftp]) { label, fs, base in
+            var o = TransferOptions()
+            o.mode = .automatic
+            let engine = TransferEngine(fs: fs, delegate: NonInteractiveTransferDelegate())
+            try await engine.run(TransferRequest(direction: .upload, sources: [dir.appendingPathComponent("notes.txt").path],
+                                                 targetDirectory: base, options: o))
+            let plain = scratch.appendingPathComponent(UUID().uuidString)
+            try await fs.download(RemotePath.join(base, "notes.txt"), to: plain, offset: 0, progress: { _ in })
+            XCTAssertEqual(try Data(contentsOf: plain), Data("one\ntwo\n".utf8), label)
+
+            o.remoteCRLF = true
+            try await TransferEngine(fs: fs, delegate: NonInteractiveTransferDelegate(answer: .overwriteAll))
+                .run(TransferRequest(direction: .upload, sources: [dir.appendingPathComponent("notes.txt").path], targetDirectory: base, options: o))
+            try await fs.download(RemotePath.join(base, "notes.txt"), to: plain, offset: 0, progress: { _ in })
+            XCTAssertEqual(try Data(contentsOf: plain), Data("one\r\ntwo\r\n".utf8), label)
+
+            let down = scratch.appendingPathComponent("text-down-\(UUID().uuidString.prefix(6))")
+            try FileManager.default.createDirectory(at: down, withIntermediateDirectories: true)
+            try await engine.run(TransferRequest(direction: .download, sources: [RemotePath.join(base, "notes.txt")],
+                                                 targetDirectory: down.path, options: o))
+            XCTAssertEqual(try Data(contentsOf: down.appendingPathComponent("notes.txt")), Data("one\ntwo\n".utf8), label)
+        }
+    }
+}

@@ -39,6 +39,7 @@ final class SyncModel {
             options = SyncOptions()
             options.transfer = Preferences.options
         }
+        options.transfer.remoteCRLF = session.site.remoteCRLF ?? false
     }
 
     var isBusy: Bool { phase == .comparing || phase == .applying }

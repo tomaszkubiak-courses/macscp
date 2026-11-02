@@ -18,6 +18,7 @@ public actor Session {
         }
         let browser = try await connect()
         let queue = TransferQueue(maxParallel: maxParallel, delegate: transferDelegate, connect: connect)
+        if site.remoteCRLF == true { await queue.setRemoteCRLF(true) }
         let s = Session(site: site, browser: browser, queue: queue, connect: connect)
         await s.startKeepalive()
         return s

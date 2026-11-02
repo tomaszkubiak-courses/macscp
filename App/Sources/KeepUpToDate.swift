@@ -79,6 +79,7 @@ final class KeepUpToDateModel {
         o.direction = downloading ? .toLocal : .toRemote
         o.deleteExtra = deleteExtra
         o.transfer = Preferences.options
+        o.transfer.remoteCRLF = session.site.remoteCRLF ?? false
         o.transfer.includeMask = mask
         return o
     }

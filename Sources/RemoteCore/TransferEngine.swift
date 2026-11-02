@@ -308,6 +308,12 @@ public actor TransferEngine {
                 let have = resumable ? ((try? fm.attributesOfItem(atPath: partial)[.size] as? NSNumber)?.int64Value ?? 0) : 0
                 try await fs.download(source, to: partialURL, offset: have < size ? have : 0, progress: report)
 
+                if o.isText(RemotePath.name(source)) {
+                    do {
+                        let data = try Data(contentsOf: partialURL)
+                        try TransferOptions.convertLineEndings(data, crlf: false).write(to: partialURL)
+                    } catch { throw localError(partialURL, error) }
+                }
                 guard rename(partial, target) == 0 else {
                     throw RemoteError(.failure, "Cannot replace \(target): \(String(cString: strerror(errno)))")
                 }
@@ -317,7 +323,17 @@ public actor TransferEngine {
             }
 
         case .upload:
-            let sourceURL = URL(fileURLWithPath: source)
+            var sourceURL = URL(fileURLWithPath: source)
+            var converted: URL?
+            defer { if let converted { try? FileManager.default.removeItem(at: converted) } }
+            if o.isText(RemotePath.name(target)) {
+                let temp = FileManager.default.temporaryDirectory.appendingPathComponent("macscp-text-\(UUID().uuidString)")
+                do {
+                    try TransferOptions.convertLineEndings(Data(contentsOf: sourceURL), crlf: o.remoteCRLF).write(to: temp)
+                } catch { throw localError(sourceURL, error) }
+                converted = temp
+                sourceURL = temp
+            }
             var appendAt: Int64 = 0
             let existing = try await fs.fileInfo(target)
             if let e = existing {

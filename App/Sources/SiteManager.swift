@@ -233,6 +233,8 @@ struct SiteManagerView: View {
                             Toggle("Active mode (the server connects back to this Mac)", isOn: Binding(
                                 get: { model.draft.ftpActiveMode ?? false }, set: { model.draft.ftpActiveMode = $0 ? true : nil }))
                         }
+                        Toggle("Server uses Windows line endings (CRLF) for text transfers", isOn: Binding(
+                            get: { model.draft.remoteCRLF ?? false }, set: { model.draft.remoteCRLF = $0 ? true : nil }))
                         Picker("Proxy", selection: Binding(get: { model.draft.proxy?.kind },
                                                            set: { kind in
                             if let kind {

@@ -77,6 +77,14 @@ struct TransferOptionsForm: View {
             Toggle("Ignore permission errors", isOn: $options.ignorePermissionErrors)
         }
         Section("Common") {
+            Picker("Transfer mode", selection: $options.mode) {
+                Text("Binary").tag(TransferOptions.Mode.binary)
+                Text("Text (convert line endings)").tag(TransferOptions.Mode.text)
+                Text("Automatic").tag(TransferOptions.Mode.automatic)
+            }
+            if options.mode == .automatic {
+                TextField("Transfer as text", text: $options.textMask, axis: .vertical)
+            }
             Toggle("Preserve timestamp", isOn: $options.preserveTime)
             Picker("Resume interrupted transfers", selection: $options.resumeSupport) {
                 Text("Always").tag(TransferOptions.ResumeSupport.on)
