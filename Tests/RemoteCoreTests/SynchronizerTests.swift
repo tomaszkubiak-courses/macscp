@@ -7,6 +7,7 @@ extension IntegrationTests {
         let old = Date(timeIntervalSince1970: 1_700_000_000)
         let new = Date(timeIntervalSince1970: 1_700_003_600)
         try await eachTarget { label, fs, base in
+            if target(label).1.isS3 { return }
             let local = scratch.appendingPathComponent("sync-\(UUID().uuidString.prefix(6))")
             let fm = FileManager.default
             try fm.createDirectory(at: local.appendingPathComponent("sub"), withIntermediateDirectories: true)

@@ -110,14 +110,14 @@ open MacSCP.xcodeproj          # or: xcodebuild -project MacSCP.xcodeproj -schem
 Unit tests run with `swift test`. Integration tests need SSH and FTP servers; the repository starts throwaway ones on localhost:
 
 ```sh
-brew install dropbear
-scripts/test-servers.sh start  # OpenSSH on :2222, Dropbear on :2223, FTP and FTPS (pyftpdlib) on :2121
+brew install dropbear versitygw
+scripts/test-servers.sh start  # OpenSSH :2222, Dropbear :2223, FTP/FTPS (pyftpdlib) :2121, S3 (versitygw) :9000 and :9001
 MACSCP_INTEGRATION=1 swift test
 scripts/test-servers.sh stop
 ```
 
 CI runs the integration suite against:
-- OpenSSH, Dropbear and pyftpdlib (FTP and FTPS) on macOS and Linux, including password logins.
+- OpenSSH, Dropbear, pyftpdlib (FTP and FTPS) and versitygw (S3 over HTTP and HTTPS) on macOS and Linux, including password logins.
 - OpenSSH 7.4, a BusyBox userland, and ProFTPD over SFTP, FTP, and explicit and implicit FTPS.
 
 ### Project layout

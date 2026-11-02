@@ -1,24 +1,11 @@
 import CSSH
 import Foundation
 
-public struct CertificateInfo: Sendable, Equatable {
-    public let host: String
-    public let port: Int
-    public let subject: String
-    public let issuer: String
-    public let fingerprint: String
-    public let problem: String
-}
-
 public actor FTPFileSystem: RemoteFileSystem {
     private let executor = QueueExecutor(label: "MacSCP.FTP")
     public nonisolated var unownedExecutor: UnownedSerialExecutor { executor.asUnownedSerialExecutor() }
     public nonisolated var supportsResume: Bool { true }
 
-    private static let initialized: Bool = cssh_curl_global_init() == CURLE_OK
-    private static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
-    public static let defaultCertificatesPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("MacSCP/trusted_certificates").path
 
     private let parameters: ConnectionParameters
     private let proto: FileProtocol
@@ -47,11 +34,8 @@ public actor FTPFileSystem: RemoteFileSystem {
 
     deinit { if let curl { curl_easy_cleanup(curl) } }
 
-    private var certificatesFile: String { parameters.trustedCertificatesPath ?? Self.defaultCertificatesPath }
-    private var certificateKey: String { "\(certificates.host):\(certificates.port)" }
-
     private func start(prompter: any ConnectionPrompter) async throws {
-        guard Self.initialized, let c = curl_easy_init() else { throw RemoteError(.connection, "Cannot initialize libcurl.") }
+        guard Curl.initialized, let c = curl_easy_init() else { throw RemoteError(.connection, "Cannot initialize libcurl.") }
         curl = c
         if parameters.user.isEmpty {
             user = "anonymous"
@@ -66,42 +50,10 @@ public actor FTPFileSystem: RemoteFileSystem {
                 throw RemoteError(.cancelled, "Authentication cancelled.")
             }
         }
-        if proto != .ftp, let text = try? String(contentsOfFile: certificatesFile, encoding: .utf8) {
-            for line in text.split(separator: "\n") {
-                let parts = line.split(separator: " ")
-                if parts.count == 2, parts[0] == certificateKey { certificates.trusted.insert(String(parts[1])) }
-            }
-        }
-        while true {
-            do {
-                try command([], "connect to", parameters.host)
-                break
-            } catch {
-                guard let info = certificates.rejected else { throw error }
-                certificates.rejected = nil
-                switch await prompter.verifyCertificate(info) {
-                case .reject:
-                    throw RemoteError(.hostKeyRejected, "Certificate of \(info.host) was rejected.")
-                case .acceptOnce:
-                    certificates.trusted.insert(info.fingerprint)
-                case .acceptAndSave:
-                    certificates.trusted.insert(info.fingerprint)
-                    try saveCertificate(info.fingerprint)
-                }
-            }
+        try await certificates.establish(prompter: prompter, file: parameters.trustedCertificatesPath) {
+            try command([], "connect to", parameters.host)
         }
         if let entry = cssh_curl_info_string(c, CURLINFO_FTP_ENTRY_PATH) { home = String(cString: entry) }
-    }
-
-    private func saveCertificate(_ fingerprint: String) throws {
-        let url = URL(fileURLWithPath: certificatesFile)
-        do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let old = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-            try (old + "\(certificateKey) \(fingerprint)\n").write(to: url, atomically: true, encoding: .utf8)
-        } catch {
-            throw RemoteError(.failure, "Cannot save the certificate: \(error.localizedDescription)")
-        }
     }
 
     private var base: String {
@@ -117,7 +69,7 @@ public actor FTPFileSystem: RemoteFileSystem {
     }
 
     private func url(_ path: String, directory: Bool = false) throws -> String {
-        let parts = try checked(path).split(separator: "/").map { $0.addingPercentEncoding(withAllowedCharacters: Self.unreserved)! }
+        let parts = try checked(path).split(separator: "/").map { Curl.encode($0) }
         return base + "/%2F" + parts.joined(separator: "/") + (directory ? "/" : "")
     }
 
@@ -125,36 +77,12 @@ public actor FTPFileSystem: RemoteFileSystem {
     private func perform(_ url: String, quote: [String] = [], facts: Bool = false, _ what: String, _ path: String,
                          _ configure: (UnsafeMutableRawPointer, Exchange) -> Void = { _, _ in }) throws -> Exchange {
         guard let c = curl else { throw RemoteError(.connection, "Not connected.") }
-        let x = Exchange()
-        let me = Unmanaged.passUnretained(x).toOpaque()
-        curl_easy_reset(c)
-        cssh_curl_string(c, CURLOPT_URL, url)
+        let x = Curl.prepare(c, url, timeout: parameters.timeoutSeconds, tls: proto == .ftp ? nil : certificates)
         cssh_curl_string(c, CURLOPT_USERNAME, user)
         cssh_curl_string(c, CURLOPT_PASSWORD, password)
-        cssh_curl_long(c, CURLOPT_NOSIGNAL, 1)
-        cssh_curl_long(c, CURLOPT_TCP_KEEPALIVE, 1)
-        cssh_curl_long(c, CURLOPT_CONNECTTIMEOUT, parameters.timeoutSeconds)
         cssh_curl_long(c, CURLOPT_SERVER_RESPONSE_TIMEOUT, 60)
-        cssh_curl_long(c, CURLOPT_LOW_SPEED_LIMIT, 1)
-        cssh_curl_long(c, CURLOPT_LOW_SPEED_TIME, 60)
         cssh_curl_long(c, CURLOPT_FTP_FILEMETHOD, CSSH_FTP_SINGLECWD)
-        cssh_curl_pointer(c, CURLOPT_ERRORBUFFER, x.errorBuffer)
-        cssh_curl_write(c, CURLOPT_HEADERFUNCTION, onReply)
-        cssh_curl_pointer(c, CURLOPT_HEADERDATA, me)
-        cssh_curl_write(c, CURLOPT_WRITEFUNCTION, onData)
-        cssh_curl_pointer(c, CURLOPT_WRITEDATA, me)
-        cssh_curl_read(c, onRead)
-        cssh_curl_pointer(c, CURLOPT_READDATA, me)
-        cssh_curl_xferinfo(c, onProgress)
-        cssh_curl_pointer(c, CURLOPT_XFERINFODATA, me)
-        cssh_curl_long(c, CURLOPT_NOPROGRESS, 0)
-        if proto != .ftp {
-            if proto == .ftps { cssh_curl_long(c, CURLOPT_USE_SSL, CSSH_USESSL_ALL) }
-            cssh_curl_long(c, CURLOPT_SSL_VERIFYPEER, 1)
-            cssh_curl_long(c, CURLOPT_SSL_VERIFYHOST, 0)
-            cssh_curl_ssl_ctx(c, configureTLS)
-            cssh_curl_pointer(c, CURLOPT_SSL_CTX_DATA, Unmanaged.passUnretained(certificates).toOpaque())
-        }
+        if proto == .ftps { cssh_curl_long(c, CURLOPT_USE_SSL, CSSH_USESSL_ALL) }
         let sendFacts = facts && !factsSent
         var list: UnsafeMutablePointer<curl_slist>?
         defer { curl_slist_free_all(list) }
@@ -220,14 +148,7 @@ public actor FTPFileSystem: RemoteFileSystem {
 
     public func homeDirectory() -> String { home }
 
-    public func canonicalPath(_ path: String) -> String {
-        var parts: [Substring] = []
-        for p in (path.hasPrefix("/") ? path : RemotePath.join(home, path)).split(separator: "/") {
-            if p == "." { continue }
-            if p == ".." { _ = parts.popLast() } else { parts.append(p) }
-        }
-        return "/" + parts.joined(separator: "/")
-    }
+    public func canonicalPath(_ path: String) -> String { RemotePath.normalize(path, home: home) }
 
     public func list(_ path: String) throws -> [RemoteFile] {
         var files: [RemoteFile]
@@ -415,93 +336,4 @@ public actor FTPFileSystem: RemoteFileSystem {
         if let curl { curl_easy_cleanup(curl) }
         curl = nil
     }
-}
-
-final class CertificateCheck: @unchecked Sendable {
-    let host: String
-    let port: Int
-    var trusted: Set<String> = []
-    var rejected: CertificateInfo?
-
-    init(host: String, port: Int) { self.host = host; self.port = port }
-}
-
-private final class Exchange {
-    var replies: [String] = []
-    var body = Data()
-    var sink: ((UnsafeRawBufferPointer) -> Bool)?
-    var source: ((UnsafeMutableRawBufferPointer) -> Int?)?
-    var progress: ((Int64) -> Void)?
-    var localError: RemoteError?
-    var cancelled = false
-    let errorBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(CURL_ERROR_SIZE))
-
-    init() { errorBuffer.initialize(to: 0) }
-    deinit { errorBuffer.deallocate() }
-
-    static func from(_ p: UnsafeMutableRawPointer?) -> Exchange { Unmanaged<Exchange>.fromOpaque(p!).takeUnretainedValue() }
-}
-
-private let onReply: curl_write_callback = { ptr, size, count, arg in
-    let n = size * count
-    Exchange.from(arg).replies.append(
-        String(decoding: UnsafeRawBufferPointer(start: ptr, count: n), as: UTF8.self).trimmingCharacters(in: .newlines))
-    return n
-}
-
-private let onData: curl_write_callback = { ptr, size, count, arg in
-    let x = Exchange.from(arg)
-    let buffer = UnsafeRawBufferPointer(start: ptr, count: size * count)
-    if let sink = x.sink { return sink(buffer) ? size * count : 0 }
-    x.body.append(contentsOf: buffer)
-    return size * count
-}
-
-private let onRead: curl_read_callback = { ptr, size, count, arg in
-    let x = Exchange.from(arg)
-    guard let ptr, let n = x.source?(UnsafeMutableRawBufferPointer(start: ptr, count: size * count)) else {
-        return Int(CURL_READFUNC_ABORT)
-    }
-    return n
-}
-
-private let onProgress: curl_xferinfo_callback = { arg, _, downloaded, _, uploaded in
-    let x = Exchange.from(arg)
-    x.progress?(Int64(max(downloaded, uploaded)))
-    if Task.isCancelled {
-        x.cancelled = true
-        return 1
-    }
-    return 0
-}
-
-private let configureTLS: curl_ssl_ctx_callback = { _, ctx, arg in
-    SSL_CTX_set_cert_verify_callback(OpaquePointer(ctx), verifyCertificate, arg)
-    return CURLE_OK
-}
-
-private let verifyCertificate: @convention(c) (OpaquePointer?, UnsafeMutableRawPointer?) -> Int32 = { store, arg in
-    let check = Unmanaged<CertificateCheck>.fromOpaque(arg!).takeUnretainedValue()
-    let chainValid = X509_verify_cert(store) == 1
-    guard let cert = X509_STORE_CTX_get0_cert(store) else { return 0 }
-    let hostValid = X509_check_host(cert, check.host, check.host.utf8.count, 0, nil) == 1
-        || X509_check_ip_asc(cert, check.host, 0) == 1
-    var digest = [UInt8](repeating: 0, count: 64)
-    var length: UInt32 = 0
-    X509_digest(cert, EVP_sha256(), &digest, &length)
-    let fingerprint = digest.prefix(Int(length)).map { String(format: "%02X", $0) }.joined(separator: ":")
-    if (chainValid && hostValid) || check.trusted.contains(fingerprint) {
-        X509_STORE_CTX_set_error(store, X509_V_OK)
-        return 1
-    }
-    func name(_ n: OpaquePointer?) -> String {
-        var buffer = [CChar](repeating: 0, count: 512)
-        X509_NAME_oneline(n, &buffer, Int32(buffer.count))
-        return buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
-    }
-    let problem = chainValid ? "The certificate was issued for a different host name."
-        : String(cString: X509_verify_cert_error_string(Int(X509_STORE_CTX_get_error(store))))
-    check.rejected = CertificateInfo(host: check.host, port: check.port, subject: name(X509_get_subject_name(cert)),
-                                     issuer: name(X509_get_issuer_name(cert)), fingerprint: fingerprint, problem: problem)
-    return 0
 }

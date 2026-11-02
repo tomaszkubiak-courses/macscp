@@ -128,6 +128,17 @@ struct SiteManagerView: View {
     @State private var advanced = false
 
     private var ftp: Bool { model.draft.fileProtocol.isFTP }
+    private var s3: Bool { model.draft.fileProtocol.isS3 }
+
+    private var defaultPort: String {
+        switch model.draft.fileProtocol {
+        case .sftp, .scp: "22"
+        case .ftp, .ftps: "21"
+        case .ftpsImplicit: "990"
+        case .s3: "443"
+        case .s3http: "80"
+        }
+    }
 
     var body: some View {
         HSplitView {
@@ -141,11 +152,12 @@ struct SiteManagerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Form {
                     Section("Session") {
-                        Picker("File protocol", selection: Binding(get: { ftp ? .ftp : model.draft.fileProtocol },
+                        Picker("File protocol", selection: Binding(get: { ftp ? .ftp : s3 ? .s3 : model.draft.fileProtocol },
                                                                    set: { model.draft.fileProtocol = $0 })) {
                             Text("SFTP").tag(FileProtocol.sftp)
                             Text("SCP").tag(FileProtocol.scp)
                             Text("FTP").tag(FileProtocol.ftp)
+                            Text("Amazon S3").tag(FileProtocol.s3)
                         }
                         if ftp {
                             Picker("Encryption", selection: $model.draft.fileProtocol) {
@@ -154,19 +166,29 @@ struct SiteManagerView: View {
                                 Text("TLS/SSL Implicit encryption").tag(FileProtocol.ftpsImplicit)
                             }
                         }
+                        if s3 {
+                            Picker("Encryption", selection: $model.draft.fileProtocol) {
+                                Text("TLS/SSL Implicit encryption").tag(FileProtocol.s3)
+                                Text("No encryption").tag(FileProtocol.s3http)
+                            }
+                        }
                         HStack {
-                            TextField("Host name", text: $model.draft.host, prompt: Text("example.com"))
-                            TextField("Port", value: $model.draft.port, format: .number.grouping(.never),
-                                      prompt: Text(model.draft.fileProtocol == .ftpsImplicit ? "990" : ftp ? "21" : "22"))
+                            TextField("Host name", text: $model.draft.host, prompt: Text(s3 ? "s3.amazonaws.com" : "example.com"))
+                            TextField("Port", value: $model.draft.port, format: .number.grouping(.never), prompt: Text(defaultPort))
                                 .frame(width: 110)
                         }
-                        TextField("User name", text: $model.draft.user,
-                                  prompt: Text(ftp ? "Anonymous" : "From ~/.ssh/config or local user"))
-                        SecureField("Password", text: $model.password, prompt: Text("Optional"))
+                        TextField(s3 ? "Access key ID" : "User name", text: $model.draft.user,
+                                  prompt: Text(s3 ? "From ~/.aws/credentials" : ftp ? "Anonymous" : "From ~/.ssh/config or local user"))
+                        SecureField(s3 ? "Secret access key" : "Password", text: $model.password, prompt: Text("Optional"))
                         Toggle("Save password in Keychain", isOn: $model.savePassword)
                     }
                     DisclosureGroup("Advanced", isExpanded: $advanced) {
-                        if !ftp {
+                        if s3 {
+                            TextField("Region", text: Binding(get: { model.draft.region ?? "" },
+                                                              set: { model.draft.region = $0.isEmpty ? nil : $0 }),
+                                      prompt: Text("us-east-1"))
+                        }
+                        if !ftp && !s3 {
                             HStack {
                                 TextField("Private key", text: Binding(get: { model.draft.privateKeyPath ?? "" },
                                                                        set: { model.draft.privateKeyPath = $0.isEmpty ? nil : $0 }),
@@ -179,7 +201,7 @@ struct SiteManagerView: View {
                         TextField("Local directory", text: $model.draft.localDirectory, prompt: Text("Home"))
                         TextField("Site name", text: $model.draft.name, prompt: Text("user@host"))
                         TextField("Folder", text: $model.draft.folder, prompt: Text("e.g. Work/Production"))
-                        if !ftp {
+                        if !ftp && !s3 {
                             Text("Jump hosts, proxies and other options come from ~/.ssh/config.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }

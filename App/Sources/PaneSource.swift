@@ -11,6 +11,7 @@ struct PaneItem: Hashable, Sendable {
     var mode: UInt16 = 0
     var owner = ""
     var group = ""
+    var hasMode = true
     var isHidden: Bool { name.hasPrefix(".") }
 }
 
@@ -97,9 +98,10 @@ final class RemoteSource: PaneSource {
     init(session: Session) { self.session = session }
 
     func list(_ path: String) async throws -> [PaneItem] {
-        try await session.browse { try await $0.list(path) }.map { f in
+        let hasMode = !session.site.fileProtocol.isS3
+        return try await session.browse { try await $0.list(path) }.map { f in
             PaneItem(name: f.name, isDirectory: f.isDirectory, isLink: f.type == .symlink, size: f.size,
-                     modified: f.modified, mode: f.permissions.mode, owner: f.owner, group: f.group)
+                     modified: f.modified, mode: f.permissions.mode, owner: f.owner, group: f.group, hasMode: hasMode)
         }
     }
 

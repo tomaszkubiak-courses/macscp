@@ -20,13 +20,13 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
           xcodebuild -version
       - name: Install tools
-        run: brew install ninja dropbear xcodegen
+        run: brew install ninja dropbear xcodegen versitygw
       - name: Build CSSH.xcframework
         if: steps.cssh.outputs.cache-hit != 'true'
         run: scripts/build-cssh.sh
       - name: Build
         run: swift build --build-tests
-      - name: Unit and integration tests (OpenSSH + Dropbear, key and agent auth, FTP + FTPS)
+      - name: Unit and integration tests (OpenSSH + Dropbear, key and agent auth, FTP + FTPS, S3)
         timeout-minutes: 20
         run: |
           scripts/test-servers.sh start
@@ -63,12 +63,12 @@ jobs:
         run: scripts/build-cssh.sh
       - name: Start servers
         run: scripts/ci-linux-servers.sh
-      - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods, FTP + FTPS)
+      - name: Unit and integration tests (OpenSSH + Dropbear, all auth methods, FTP + FTPS, S3)
         timeout-minutes: 20
         run: scripts/ci-run-tests.sh
       - name: Server logs
         if: failure()
-        run: for f in /tmp/dropbear.log /tmp/sshd.log /tmp/ftpd.log; do echo "== $f"; tail -n 80 "$f"; done
+        run: for f in /tmp/dropbear.log /tmp/sshd.log /tmp/ftpd.log /tmp/s3.log /tmp/s3-tls.log; do echo "== $f"; tail -n 80 "$f"; done
 
   servers:
     runs-on: ubuntu-24.04
@@ -84,7 +84,7 @@ jobs:
           docker run --rm --network host --cap-add=SYS_PTRACE -v "$PWD:/src" -v /tmp/keys:/keys -w /src \
             -e MACSCP_INTEGRATION=1 -e MACSCP_TEST_USER=macscp -e MACSCP_TEST_PASSWORD=Test-pass-1 -e MACSCP_TEST_KEYS=/keys \
             -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp \
-            -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 \
+            -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 -e MACSCP_TEST_S3_SERVERS= \
             swift:6.2-noble bash -c '
               apt-get update -q >/dev/null &&
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build pkg-config libssl-dev \

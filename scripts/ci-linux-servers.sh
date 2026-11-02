@@ -30,6 +30,15 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=localhost \
 python3 "$(dirname "$0")/ftp-server.py" 2121 /tmp/ftp-root macscp macscp-ftp /tmp/ftp-cert/cert.pem /tmp/ftp-cert/key.pem \
   >/tmp/ftpd.log 2>&1 &
 
-for p in 2222 2223 2121; do
+VGW=v1.10.0
+curl -fsSL "https://github.com/versity/versitygw/releases/download/$VGW/versitygw_${VGW}_Linux_x86_64.tar.gz" -o /tmp/vgw.tgz
+echo "8f9869752939d4dc9cfe1bddb935a02cc6610e95319a3a9fc2947d2a6ebd2c91  /tmp/vgw.tgz" | sha256sum -c -
+tar xzf /tmp/vgw.tgz -C /tmp && install /tmp/versitygw_${VGW}_Linux_x86_64/versitygw /usr/local/bin/
+mkdir -p /tmp/s3-root/macscp
+versitygw --access macscp --secret macscp-s3 --port 127.0.0.1:9000 posix /tmp/s3-root >/tmp/s3.log 2>&1 &
+versitygw --access macscp --secret macscp-s3 --port 127.0.0.1:9001 --cert /tmp/ftp-cert/cert.pem --key /tmp/ftp-cert/key.pem \
+  posix /tmp/s3-root >/tmp/s3-tls.log 2>&1 &
+
+for p in 2222 2223 2121 9000 9001; do
   for _ in $(seq 50); do nc -z 127.0.0.1 $p && break; sleep 0.1; done
 done

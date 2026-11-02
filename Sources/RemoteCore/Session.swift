@@ -29,6 +29,7 @@ public actor Session {
         case .sftp: try await SFTPFileSystem.connect(params, prompter: prompter)
         case .scp: try await SCPFileSystem.connect(params, prompter: prompter)
         case .ftp, .ftps, .ftpsImplicit: try await FTPFileSystem.connect(params, proto, prompter: prompter)
+        case .s3, .s3http: try await S3FileSystem.connect(params, proto, prompter: prompter)
         }
     }
 

@@ -23,6 +23,15 @@ public enum RemotePath {
         return String(p)
     }
 
+    public static func normalize(_ path: String, home: String) -> String {
+        var parts: [Substring] = []
+        for p in (path.hasPrefix("/") ? path : join(home, path)).split(separator: "/") {
+            if p == "." { continue }
+            if p == ".." { _ = parts.popLast() } else { parts.append(p) }
+        }
+        return "/" + parts.joined(separator: "/")
+    }
+
     public static func shellQuote(_ s: String) -> String {
         "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }

@@ -40,7 +40,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         buildLayout()
         let site = session.site
         window.title = site.name.isEmpty ? site.host : site.name
-        let proto = site.fileProtocol.isFTP ? (site.fileProtocol == .ftp ? "FTP" : "FTPS") : site.fileProtocol.rawValue.uppercased()
+        let proto = site.fileProtocol.isS3 ? "S3" : site.fileProtocol.isFTP ? (site.fileProtocol == .ftp ? "FTP" : "FTPS")
+            : site.fileProtocol.rawValue.uppercased()
         window.subtitle = "\(proto) · \(site.user.isEmpty ? "" : site.user + "@")\(site.host)"
         window.setFrameAutosaveName("Commander")
         if window.frame.width < 600 { window.center() }
@@ -135,6 +136,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         switch item.action {
         case #selector(toggleHiddenFiles(_:)): item.state = UserDefaults.standard.bool(forKey: Preferences.showHidden) ? .on : .off
         case #selector(toggleQueue(_:)): item.state = outerSplit.splitViewItems[1].isCollapsed ? .off : .on
+        case #selector(openInTerminal(_:)): return !session.site.fileProtocol.isS3
         default: break
         }
         return true
@@ -142,6 +144,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     @objc func openInTerminal(_ sender: Any?) {
         let s = session.site
+        guard !s.fileProtocol.isS3 else { return NSSound.beep() }
         var args = ["ssh"]
         if let port = s.port, !s.fileProtocol.isFTP { args += ["-p", String(port)] }
         if let key = s.privateKeyPath, !key.isEmpty { args += ["-i", key] }

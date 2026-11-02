@@ -327,7 +327,7 @@ public actor TransferEngine {
                                                                       canResume: fs.supportsResume && t.size < size), o) else { return }
                 appendAt = offset
             }
-            if appendAt > 0 {
+            if appendAt > 0 || fs.uploadsInPlace {
                 try await fs.upload(sourceURL, to: target, offset: appendAt, progress: report)
             } else {
                 let have = resumable ? (try await fs.fileInfo(partial)?.size ?? 0) : 0

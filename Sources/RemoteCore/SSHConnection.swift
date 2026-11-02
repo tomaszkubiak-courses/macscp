@@ -30,6 +30,8 @@ public struct ConnectionParameters: Sendable, Equatable {
 
     public var trustedCertificatesPath: String?
 
+    public var region: String?
+
     public var sshConfigPath: String?
     public var timeoutSeconds = 15
 

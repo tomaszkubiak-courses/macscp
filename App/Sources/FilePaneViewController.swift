@@ -458,7 +458,7 @@ extension FilePaneViewController: NSTableViewDataSource, NSTableViewDelegate {
             t.alignment = .right
         case "modified": t.stringValue = Format.date(item.modified)
         case "permissions":
-            t.stringValue = (item.isLink ? "l" : item.isDirectory ? "d" : "-") + Permissions(item.mode).text
+            t.stringValue = item.hasMode ? (item.isLink ? "l" : item.isDirectory ? "d" : "-") + Permissions(item.mode).text : ""
             t.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
         case "owner": t.stringValue = item.owner
         default: break

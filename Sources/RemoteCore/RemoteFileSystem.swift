@@ -4,6 +4,7 @@ public typealias ProgressHandler = @Sendable (Int64) -> Void
 
 public protocol RemoteFileSystem: Actor {
     nonisolated var supportsResume: Bool { get }
+    nonisolated var uploadsInPlace: Bool { get }
 
     func homeDirectory() async throws -> String
     func canonicalPath(_ path: String) async throws -> String
@@ -25,6 +26,10 @@ public protocol RemoteFileSystem: Actor {
 
     func keepalive() async
     func disconnect() async
+}
+
+extension RemoteFileSystem {
+    public nonisolated var uploadsInPlace: Bool { false }
 }
 
 func localError(_ url: URL, _ error: Error) -> RemoteError {

@@ -8,6 +8,7 @@ final class IntegrationTests: XCTestCase {
         let port: Int
         var protocols: [FileProtocol] = [.sftp, .scp]
         var password: String?
+        var home: String?
     }
 
     static let env = ProcessInfo.processInfo.environment
@@ -26,6 +27,12 @@ final class IntegrationTests: XCTestCase {
                       protocols: p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) },
                       password: env["MACSCP_TEST_FTP_PASSWORD"] ?? "macscp-ftp")
     }
+    let s3Servers: [Server] = (env["MACSCP_TEST_S3_SERVERS"] ?? "rclone:9000:s3http,rclone-tls:9001:s3").split(separator: ",").map {
+        let p = $0.split(separator: ":")
+        return Server(name: String(p[0]), port: Int(p[1])!, protocols: [FileProtocol(rawValue: String(p[2]))!],
+                      password: env["MACSCP_TEST_S3_SECRET"] ?? "macscp-s3", home: "/macscp")
+    }
+    var allServers: [Server] { servers + ftpServers + s3Servers }
     var scratch: URL!
 
     override func setUpWithError() throws {
@@ -78,16 +85,17 @@ final class IntegrationTests: XCTestCase {
 
     func target(_ label: String) -> (Server, FileProtocol) {
         let parts = label.split(separator: "/")
-        return ((servers + ftpServers).first { $0.name == parts[0] }!, FileProtocol(rawValue: String(parts[1]))!)
+        return (allServers.first { $0.name == parts[0] }!, FileProtocol(rawValue: String(parts[1]))!)
     }
 
     func eachTarget(protocols: [FileProtocol] = FileProtocol.allCases,
                     _ body: (String, any RemoteFileSystem, String) async throws -> Void) async throws {
-        for s in servers + ftpServers {
+        for s in allServers {
             for proto in protocols where s.protocols.contains(proto) {
                 let label = "\(s.name)/\(proto.rawValue)"
                 let fs = try await connect(s, proto)
-                let base = RemotePath.join(try await fs.homeDirectory(), "macscp-test-\(UUID().uuidString.prefix(8))")
+                let home = try await fs.homeDirectory()
+                let base = RemotePath.join(s.home ?? home, "macscp-test-\(UUID().uuidString.prefix(8))")
                 try await fs.makeDirectory(base)
                 do {
                     try await body(label, fs, base)
@@ -133,18 +141,20 @@ final class IntegrationTests: XCTestCase {
             let missing = try await fs.fileInfo(remote)
             XCTAssertNil(missing, label)
 
-            try await fs.setPermissions(renamed, Permissions(0o600))
-            let info = try await fs.fileInfo(renamed)
-            XCTAssertEqual(info?.permissions.mode, 0o600, label)
+            if !target(label).1.isS3 {
+                try await fs.setPermissions(renamed, Permissions(0o600))
+                let info = try await fs.fileInfo(renamed)
+                XCTAssertEqual(info?.permissions.mode, 0o600, label)
 
-            let when = Date(timeIntervalSince1970: 1_700_000_040)
-            try await fs.setModified(renamed, when)
-            let timed = try await fs.fileInfo(renamed)
-            XCTAssertEqual(timed?.modified, when, label)
+                let when = Date(timeIntervalSince1970: 1_700_000_040)
+                try await fs.setModified(renamed, when)
+                let timed = try await fs.fileInfo(renamed)
+                XCTAssertEqual(timed?.modified, when, label)
+            }
 
             let sub = RemotePath.join(base, "sub dir")
             try await fs.makeDirectory(sub)
-            if !target(label).1.isFTP {
+            if !target(label).1.isFTP && !target(label).1.isS3 {
                 try await fs.createSymlink(RemotePath.join(base, "file-link"), target: renamed)
                 try await fs.createSymlink(RemotePath.join(base, "dir-link"), target: sub)
                 try await fs.createSymlink(RemotePath.join(base, "broken-link"), target: RemotePath.join(base, "nope"))

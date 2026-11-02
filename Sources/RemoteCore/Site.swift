@@ -4,9 +4,10 @@ import Security
 #endif
 
 public enum FileProtocol: String, Codable, Sendable, CaseIterable {
-    case sftp, scp, ftp, ftps, ftpsImplicit
+    case sftp, scp, ftp, ftps, ftpsImplicit, s3, s3http
 
     public var isFTP: Bool { self == .ftp || self == .ftps || self == .ftpsImplicit }
+    public var isS3: Bool { self == .s3 || self == .s3http }
 }
 
 public struct Site: Codable, Sendable, Hashable, Identifiable {
@@ -22,6 +23,7 @@ public struct Site: Codable, Sendable, Hashable, Identifiable {
     public var useAgent = true
     public var remoteDirectory = ""
     public var localDirectory = ""
+    public var region: String?
 
     public init(name: String, host: String, fileProtocol: FileProtocol = .sftp, user: String = "") {
         self.name = name; self.host = host; self.fileProtocol = fileProtocol; self.user = user
@@ -31,6 +33,7 @@ public struct Site: Codable, Sendable, Hashable, Identifiable {
         var p = ConnectionParameters(host: host, port: port, user: user, password: password,
                                      privateKeyPath: privateKeyPath?.isEmpty == false ? privateKeyPath : nil)
         p.useAgent = useAgent
+        p.region = region?.isEmpty == false ? region : nil
         return p
     }
 }

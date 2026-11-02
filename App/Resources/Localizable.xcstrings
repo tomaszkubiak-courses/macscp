@@ -72,15 +72,6 @@
     "*.txt; *.log | *.bak; .git/" : {
 
     },
-    "21" : {
-
-    },
-    "22" : {
-
-    },
-    "990" : {
-
-    },
     "Abort" : {
 
     },
@@ -88,6 +79,9 @@
 
     },
     "Accept" : {
+
+    },
+    "Access key ID" : {
 
     },
     "Add X to directories" : {
@@ -103,6 +97,9 @@
 
     },
     "Always" : {
+
+    },
+    "Amazon S3" : {
 
     },
     "Anonymous" : {
@@ -301,6 +298,9 @@
 
     },
     "Forward" : {
+
+    },
+    "From ~/.aws/credentials" : {
 
     },
     "From ~/.ssh/config or local user" : {
@@ -536,6 +536,9 @@
     "Refresh" : {
 
     },
+    "Region" : {
+
+    },
     "Remote directory" : {
 
     },
@@ -585,6 +588,9 @@
 
     },
     "Save password in Keychain" : {
+
+    },
+    "Secret access key" : {
 
     },
     "Select All" : {
@@ -824,7 +830,13 @@
     "folder" : {
 
     },
+    "s3.amazonaws.com" : {
+
+    },
     "untitled folder" : {
+
+    },
+    "us-east-1" : {
 
     },
     "user@host" : {

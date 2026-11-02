@@ -6,6 +6,9 @@ SSHD_PORT=${SSHD_PORT:-2222}
 DROPBEAR_PORT=${DROPBEAR_PORT:-2223}
 FTP_PORT=${FTP_PORT:-2121}
 FTP_DIR=$ROOT/build/ftpd
+S3_PORT=${S3_PORT:-9000}
+S3_TLS_PORT=${S3_TLS_PORT:-9001}
+S3_DIR=$ROOT/build/s3
 
 wait_port() {
   for _ in $(seq 50); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.1; done
@@ -13,7 +16,7 @@ wait_port() {
 }
 
 stop() {
-  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid; do
+  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid; do
     [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true
     rm -f "$p"
   done
@@ -56,6 +59,17 @@ CONF
   "$FTP_DIR/venv/bin/python3" "$ROOT/scripts/ftp-server.py" "$FTP_PORT" "$FTP_DIR/root" "$(id -un)" macscp-ftp \
     "$FTP_DIR/cert.pem" "$FTP_DIR/key.pem" >"$FTP_DIR/ftpd.log" 2>&1 &
   echo $! > "$FTP_DIR/ftpd.pid"
-  wait_port "$FTP_PORT" ;;
+  wait_port "$FTP_PORT"
+
+  if command -v versitygw >/dev/null; then
+    mkdir -p "$S3_DIR/root/macscp"
+    for spec in "$S3_PORT:s3" "$S3_TLS_PORT:s3-tls"; do
+      tls=(); [ "${spec#*:}" = s3-tls ] && tls=(--cert "$FTP_DIR/cert.pem" --key "$FTP_DIR/key.pem")
+      versitygw --access "$(id -un)" --secret macscp-s3 --port "127.0.0.1:${spec%%:*}" ${tls[@]+"${tls[@]}"} \
+        posix "$S3_DIR/root" >"$S3_DIR/${spec#*:}.log" 2>&1 &
+      echo $! > "$S3_DIR/${spec#*:}.pid"
+      wait_port "${spec%%:*}"
+    done
+  fi ;;
 stop) stop ;;
 esac
