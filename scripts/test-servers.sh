@@ -21,7 +21,7 @@ wait_port() {
 }
 
 stop() {
-  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid "$DAV_DIR"/dav.pid "$DAV_DIR"/dav-tls.pid "$DIR"/socks.pid "$DIR"/http-proxy.pid; do
+  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid "$DAV_DIR"/dav.pid "$DAV_DIR"/dav-tls.pid "$DIR"/http-proxy.pid; do
     [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true
     rm -f "$p"
   done
@@ -84,10 +84,7 @@ CONF
   wait_port "$DAV_PORT"
   wait_port "$DAV_TLS_PORT"
 
-  ssh -N -D "127.0.0.1:$SOCKS_PORT" -p "$SSHD_PORT" -i "$DIR/id_ed25519" -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$(id -un)@127.0.0.1" &
-  echo $! > "$DIR/socks.pid"
-  python3 "$ROOT/scripts/connect-proxy.py" "$HTTP_PROXY_PORT" >"$DIR/http-proxy.log" 2>&1 &
+  python3 "$ROOT/scripts/connect-proxy.py" "$SOCKS_PORT" "$HTTP_PROXY_PORT" >"$DIR/http-proxy.log" 2>&1 &
   echo $! > "$DIR/http-proxy.pid"
   wait_port "$SOCKS_PORT"
   wait_port "$HTTP_PROXY_PORT" ;;

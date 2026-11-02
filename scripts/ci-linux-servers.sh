@@ -42,9 +42,7 @@ versitygw --access macscp --secret macscp-s3 --port 127.0.0.1:9001 --cert /tmp/f
 python3 -m pip install -q --break-system-packages wsgidav cheroot
 "$(dirname "$0")/webdav-server.sh" "$(command -v wsgidav)" /tmp/webdav macscp macscp-dav /tmp/ftp-cert/cert.pem /tmp/ftp-cert/key.pem 8080 8443
 
-ssh -N -D 127.0.0.1:1080 -p 2222 -i /keys/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-  -o LogLevel=ERROR macscp@127.0.0.1 &
-python3 "$(dirname "$0")/connect-proxy.py" 3128 >/tmp/http-proxy.log 2>&1 &
+python3 "$(dirname "$0")/connect-proxy.py" 1080 3128 >/tmp/http-proxy.log 2>&1 &
 
 for p in 2222 2223 2121 9000 9001 8080 8443 1080 3128; do
   for _ in $(seq 50); do nc -z 127.0.0.1 $p && break; sleep 0.1; done

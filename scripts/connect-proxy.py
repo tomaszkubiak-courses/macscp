@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import sys
 import urllib.parse
 
@@ -14,8 +15,32 @@ async def pipe(reader, writer):
         writer.close()
 
 
+async def socks5(reader, writer):
+    count = (await reader.readexactly(2))[1]
+    await reader.readexactly(count)
+    writer.write(b"\x05\x00")
+    _, _, _, atyp = await reader.readexactly(4)
+    if atyp == 3:
+        host = (await reader.readexactly((await reader.readexactly(1))[0])).decode()
+    else:
+        host = str(ipaddress.ip_address(await reader.readexactly(4 if atyp == 1 else 16)))
+    port = int.from_bytes(await reader.readexactly(2), "big")
+    try:
+        upstream_reader, upstream_writer = await asyncio.open_connection(host, port)
+    except OSError:
+        writer.write(b"\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00")
+        writer.close()
+        return
+    writer.write(b"\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00")
+    await writer.drain()
+    await asyncio.gather(pipe(reader, upstream_writer), pipe(upstream_reader, writer))
+
+
 async def handle(reader, writer):
-    request = await reader.readuntil(b"\r\n\r\n")
+    first = await reader.readexactly(1)
+    if first == b"\x05":
+        return await socks5(reader, writer)
+    request = first + await reader.readuntil(b"\r\n\r\n")
     line, rest = request.split(b"\r\n", 1)
     method, target, version = line.decode().split(" ", 2)
     if method != "CONNECT":
@@ -45,9 +70,8 @@ async def handle(reader, writer):
 
 
 async def main():
-    server = await asyncio.start_server(handle, "127.0.0.1", int(sys.argv[1]))
-    async with server:
-        await server.serve_forever()
+    servers = [await asyncio.start_server(handle, "127.0.0.1", int(port)) for port in sys.argv[1:]]
+    await asyncio.gather(*(s.serve_forever() for s in servers))
 
 
 asyncio.run(main())
