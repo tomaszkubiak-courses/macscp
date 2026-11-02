@@ -78,3 +78,42 @@ extension IntegrationTests {
         }
     }
 }
+
+extension IntegrationTests {
+    func testSyncByChecksumAndTimestampsOnly() async throws {
+        let old = Date(timeIntervalSince1970: 1_700_000_000)
+        let new = Date(timeIntervalSince1970: 1_700_003_600)
+        try await eachTarget(protocols: [.sftp, .scp]) { label, fs, base in
+            let local = scratch.appendingPathComponent("sum-\(UUID().uuidString.prefix(6))")
+            try FileManager.default.createDirectory(at: local, withIntermediateDirectories: true)
+            func put(_ name: String, local text: String, _ lt: Date, remote rtext: String, _ rt: Date) async throws {
+                let url = local.appendingPathComponent(name)
+                try text.write(to: url, atomically: true, encoding: .utf8)
+                try FileManager.default.setAttributes([.modificationDate: lt], ofItemAtPath: url.path)
+                let tmp = scratch.appendingPathComponent(UUID().uuidString)
+                try rtext.write(to: tmp, atomically: true, encoding: .utf8)
+                try await fs.upload(tmp, to: RemotePath.join(base, name), offset: 0, progress: { _ in })
+                try await fs.setModified(RemotePath.join(base, name), rt)
+            }
+            try await put("same-content.txt", local: "abc", new, remote: "abc", old)
+            try await put("changed.txt", local: "xyz", old, remote: "abc", old)
+            let sync = Synchronizer(fs: fs)
+            var o = SyncOptions()
+            o.byChecksum = true
+            let byContent = try await sync.compare(local: local.path, remote: base, options: o)
+                .map { "\($0.kind.rawValue) \(RemotePath.name($0.remotePath))" }
+            XCTAssertEqual(byContent, ["uploadUpdate changed.txt"], label)
+
+            var t = SyncOptions()
+            t.timestampsOnly = true
+            t.byChecksum = true
+            let stamps = try await sync.compare(local: local.path, remote: base, options: t)
+            XCTAssertEqual(stamps.map { "\($0.kind.rawValue) \(RemotePath.name($0.remotePath))" }, ["setRemoteTime same-content.txt"], label)
+            try await sync.apply(stamps, options: t)
+            let after = try await fs.fileInfo(RemotePath.join(base, "same-content.txt"))
+            XCTAssertEqual(after?.modified, new, label)
+            let again = try await sync.compare(local: local.path, remote: base, options: t)
+            XCTAssertTrue(again.isEmpty, "\(label): \(again.map(\.kind))")
+        }
+    }
+}

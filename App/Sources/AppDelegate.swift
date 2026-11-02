@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if d.bool(forKey: "MacSCPDebugKeep") {
                     try? await Task.sleep(for: .seconds(2))
                     commanders.last?.keepRemoteUpToDate(nil)
-                    commanders.last?.debugStartKeep()
+                    commanders.last?.debugStartKeep(downloading: d.bool(forKey: "MacSCPDebugKeepDownload"))
                 }
                 if let command = d.string(forKey: "MacSCPDebugConsole") {
                     try? await Task.sleep(for: .seconds(2))

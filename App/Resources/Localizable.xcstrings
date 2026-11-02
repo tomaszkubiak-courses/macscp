@@ -150,7 +150,23 @@
     "Changed" : {
 
     },
+    "Check every %lld seconds" : {
+
+    },
     "Check for Updates…" : {
+
+    },
+    "Checking %@ every %lld seconds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Checking %1$@ every %2$lld seconds"
+          }
+        }
+      }
+    },
+    "Checking the server…" : {
 
     },
     "Choose WinSCP.ini, or a .reg export of WinSCP's registry key." : {
@@ -196,6 +212,9 @@
 
     },
     "Compare by time" : {
+
+    },
+    "Compare contents by checksum (SFTP and SCP)" : {
 
     },
     "Comparing…" : {
@@ -286,6 +305,9 @@
 
     },
     "Download “%@” to local folder:" : {
+
+    },
+    "Downloaded %@" : {
 
     },
     "Download…" : {
@@ -438,10 +460,10 @@
     "Jump hosts, proxies and other options come from ~/.ssh/config." : {
 
     },
-    "Keep Remote Folder Up to Date — %@" : {
+    "Keep Folders Up to Date — %@" : {
 
     },
-    "Keep Remote Folder Up to Date…" : {
+    "Keep Folders Up to Date…" : {
 
     },
     "Keep Server Version" : {
@@ -475,6 +497,9 @@
     "Local → Remote" : {
 
     },
+    "Local → Remote: upload local changes as they happen" : {
+
+    },
     "Location" : {
 
     },
@@ -493,10 +518,16 @@
     "Move %@ to the Trash?" : {
 
     },
+    "Move local files to the Trash when deleted on the server" : {
+
+    },
     "Move to Trash" : {
 
     },
     "Move to Trash / Delete" : {
+
+    },
+    "Moved %@ to the Trash" : {
 
     },
     "Name" : {
@@ -678,6 +709,9 @@
     "Remote → Local" : {
 
     },
+    "Remote → Local: check the server and download changes" : {
+
+    },
     "Remove" : {
 
     },
@@ -768,6 +802,12 @@
     "Set permissions recursively" : {
 
     },
+    "Set the local file's time" : {
+
+    },
+    "Set the server file's time" : {
+
+    },
     "Settings" : {
 
     },
@@ -847,6 +887,9 @@
 
     },
     "Synchronize the whole folder before watching" : {
+
+    },
+    "Synchronize timestamps only (no file transfers)" : {
 
     },
     "Synchronized %lld items." : {
@@ -997,6 +1040,9 @@
 
     },
     "Watch local folder" : {
+
+    },
+    "Watch remote folder" : {
 
     },
     "Watching %@" : {

@@ -50,6 +50,8 @@ final class KeepUpToDateModel {
 
     var localDir: String
     var remoteDir: String
+    var downloading = false
+    var interval = 30
     var deleteExtra = false
     var syncFirst = true
     var mask = ""
@@ -63,6 +65,8 @@ final class KeepUpToDateModel {
     @ObservationIgnored private var pending = Set<String>()
     @ObservationIgnored private var realBase = ""
     @ObservationIgnored var onChange: () -> Void = {}
+    @ObservationIgnored var onLocalChange: () -> Void = {}
+    @ObservationIgnored private var poller: Task<Void, Never>?
 
     init(session: Session, localDir: String, remoteDir: String) {
         self.session = session
@@ -72,7 +76,7 @@ final class KeepUpToDateModel {
 
     private var options: SyncOptions {
         var o = SyncOptions()
-        o.direction = .toRemote
+        o.direction = downloading ? .toLocal : .toRemote
         o.deleteExtra = deleteExtra
         o.transfer = Preferences.options
         o.transfer.includeMask = mask
@@ -94,6 +98,16 @@ final class KeepUpToDateModel {
             return
         }
         running = true
+        if downloading {
+            add(String(localized: "Checking \(remoteDir) every \(interval) seconds"))
+            poller = Task { [weak self] in
+                while let self, self.running {
+                    await self.pollRemote()
+                    try? await Task.sleep(for: .seconds(max(5, self.interval)))
+                }
+            }
+            return
+        }
         add(String(localized: "Watching \(localDir)"))
         let w = LocalWatcher(path: realBase) { [weak self] paths in
             Task { @MainActor in self?.changed(paths) }
@@ -102,7 +116,35 @@ final class KeepUpToDateModel {
         if syncFirst { changed([realBase], recursive: true) }
     }
 
+    private func pollRemote() async {
+        busy = true
+        defer { busy = false }
+        var o = options
+        o.recursive = true
+        do {
+            if synchronizer == nil {
+                synchronizer = Synchronizer(fs: try await session.connectTransfer(), reconnect: session.connectTransfer)
+            }
+            let actions = try await synchronizer!.compare(local: realBase, remote: remoteDir, options: o)
+            guard !actions.isEmpty, running else { return }
+            try await synchronizer!.apply(actions, options: o)
+            for a in actions {
+                let name = String(a.remotePath.dropFirst(min(remoteDir.count + 1, a.remotePath.count)))
+                switch a.kind {
+                case .downloadNew, .downloadUpdate: add(String(localized: "Downloaded \(name)"))
+                case .deleteLocal: add(String(localized: "Moved \(name) to the Trash"))
+                default: break
+                }
+            }
+            onLocalChange()
+        } catch {
+            add("\(error)", error: true)
+        }
+    }
+
     func stop() {
+        poller?.cancel()
+        poller = nil
         watcher?.stop()
         watcher = nil
         pending.removeAll()
@@ -170,16 +212,30 @@ struct KeepUpToDateView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Form {
-                TextField("Watch local folder", text: $model.localDir).disabled(model.running)
-                TextField("Upload to remote folder", text: $model.remoteDir).disabled(model.running)
+                Picker("Direction", selection: $model.downloading) {
+                    Text("Local → Remote: upload local changes as they happen").tag(false)
+                    Text("Remote → Local: check the server and download changes").tag(true)
+                }
+                .disabled(model.running)
+                TextField(model.downloading ? "Local folder" : "Watch local folder", text: $model.localDir).disabled(model.running)
+                TextField(model.downloading ? "Watch remote folder" : "Upload to remote folder", text: $model.remoteDir)
+                    .disabled(model.running)
+                if model.downloading {
+                    Stepper("Check every \(model.interval) seconds", value: $model.interval, in: 5...3600, step: 5)
+                        .disabled(model.running)
+                }
                 TextField("File mask", text: $model.mask, prompt: Text("| .git/; *.tmp")).disabled(model.running)
-                Toggle("Delete remote files that are deleted locally", isOn: $model.deleteExtra).disabled(model.running)
-                Toggle("Synchronize the whole folder before watching", isOn: $model.syncFirst).disabled(model.running)
+                Toggle(model.downloading ? "Move local files to the Trash when deleted on the server"
+                       : "Delete remote files that are deleted locally", isOn: $model.deleteExtra).disabled(model.running)
+                if !model.downloading {
+                    Toggle("Synchronize the whole folder before watching", isOn: $model.syncFirst).disabled(model.running)
+                }
             }
             .formStyle(.grouped)
             HStack {
                 if model.busy { ProgressView().controlSize(.small) }
-                Text(model.running ? "Watching for changes…" : "Stopped").foregroundStyle(.secondary)
+                Text(model.running ? (model.downloading ? "Checking the server…" : "Watching for changes…") : "Stopped")
+                    .foregroundStyle(.secondary)
                 Spacer()
                 if model.running {
                     Button("Stop") { model.stop() }
@@ -207,7 +263,7 @@ final class KeepUpToDateWindowController: NSWindowController, NSWindowDelegate {
     init(model: KeepUpToDateModel, title: String) {
         self.model = model
         let window = NSWindow(contentViewController: NSHostingController(rootView: KeepUpToDateView(model: model)))
-        window.title = String(localized: "Keep Remote Folder Up to Date — \(title)")
+        window.title = String(localized: "Keep Folders Up to Date — \(title)")
         window.styleMask.insert(.resizable)
         super.init(window: window)
         window.delegate = self

@@ -168,6 +168,12 @@ public actor SFTPFileSystem: RemoteFileSystem {
 
     public nonisolated var supportsOwnership: Bool { true }
 
+    public func checksums(_ paths: [String]) throws -> [String: String]? {
+        let r = try ssh.runShell(checksumCommand(paths), in: "/")
+        let sums = parseChecksums(r.output, paths)
+        return sums.isEmpty ? nil : sums
+    }
+
     public func setOwner(_ path: String, owner: String?, group: String?) throws {
         guard owner != nil || group != nil else { return }
         let uid = owner.flatMap { UInt32($0) }, gid = group.flatMap { UInt32($0) }

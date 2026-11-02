@@ -1,5 +1,6 @@
 // Comparison rules follow WinSCP's TTerminal::SynchronizeCollect (core/Terminal.cpp).
 // Copyright (C) Martin Prikryl. Licensed under GPL-3; see LICENSE.
+import CSSH
 import Foundation
 
 public struct SyncOptions: Sendable, Codable, Equatable {
@@ -12,13 +13,31 @@ public struct SyncOptions: Sendable, Codable, Equatable {
     public var byTime = true
     public var bySize = false
     public var recursive = true
+    public var byChecksum = false
+    public var timestampsOnly = false
     public var transfer = TransferOptions()
 
     public init() {}
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        direction = try c.decodeIfPresent(Direction.self, forKey: .direction) ?? .toRemote
+        mirror = try c.decodeIfPresent(Bool.self, forKey: .mirror) ?? false
+        deleteExtra = try c.decodeIfPresent(Bool.self, forKey: .deleteExtra) ?? false
+        existingOnly = try c.decodeIfPresent(Bool.self, forKey: .existingOnly) ?? false
+        byTime = try c.decodeIfPresent(Bool.self, forKey: .byTime) ?? true
+        bySize = try c.decodeIfPresent(Bool.self, forKey: .bySize) ?? false
+        recursive = try c.decodeIfPresent(Bool.self, forKey: .recursive) ?? true
+        byChecksum = try c.decodeIfPresent(Bool.self, forKey: .byChecksum) ?? false
+        timestampsOnly = try c.decodeIfPresent(Bool.self, forKey: .timestampsOnly) ?? false
+        transfer = try c.decodeIfPresent(TransferOptions.self, forKey: .transfer) ?? TransferOptions()
+    }
 }
 
 public struct SyncAction: Sendable, Identifiable, Equatable {
-    public enum Kind: String, Sendable { case uploadNew, uploadUpdate, downloadNew, downloadUpdate, deleteRemote, deleteLocal }
+    public enum Kind: String, Sendable {
+        case uploadNew, uploadUpdate, downloadNew, downloadUpdate, deleteRemote, deleteLocal, setRemoteTime, setLocalTime
+    }
 
     public let id = UUID()
     public let kind: Kind
@@ -101,6 +120,15 @@ public actor Synchronizer {
         var remoteByName: [String: Entry] = [:]
         for r in remotes { remoteByName[r.name.precomposedStringWithCanonicalMapping] = r }
         var matched = Set<String>()
+        var remoteSums: [String: String] = [:]
+        if o.byChecksum {
+            let sameSize = locals.compactMap { l -> String? in
+                guard !l.isDirectory, let r = remoteByName[l.name.precomposedStringWithCanonicalMapping], !r.isDirectory,
+                      r.size == l.size else { return nil }
+                return RemotePath.join(remoteDir, r.name)
+            }
+            if !sameSize.isEmpty { remoteSums = try await fs.checksums(sameSize) ?? [:] }
+        }
 
         for l in locals.sorted(by: { $0.name < $1.name }) {
             let key = l.name.precomposedStringWithCanonicalMapping
@@ -115,7 +143,26 @@ public actor Synchronizer {
                     continue
                 }
                 let rsum = FileSummary(path: rp, size: r.size, modified: r.modified)
-                if let kind = Self.updateKind(local: l, remote: r, o) {
+                var sameContent: Bool?
+                if o.byChecksum, l.size == r.size, let remoteSum = remoteSums[rp] {
+                    sameContent = try Self.sha256(lp) == remoteSum
+                }
+                if o.timestampsOnly {
+                    guard l.size == r.size, sameContent != false, let lm = l.modified, let rm = r.modified,
+                          Int(lm.timeIntervalSince1970) != Int(rm.timeIntervalSince1970) else { continue }
+                    let localNewer = lm > rm
+                    let kind: SyncAction.Kind? = switch o.direction {
+                    case .toRemote: .setRemoteTime
+                    case .toLocal: .setLocalTime
+                    case .both: localNewer ? .setRemoteTime : .setLocalTime
+                    }
+                    if let kind {
+                        actions.append(SyncAction(kind: kind, localPath: lp, remotePath: rp, isDirectory: false, local: lsum, remote: rsum))
+                    }
+                    continue
+                }
+                if sameContent == true { continue }
+                if let kind = Self.updateKind(local: l, remote: r, o) ?? (sameContent == false ? Self.forcedKind(l, r, o) : nil) {
                     actions.append(SyncAction(kind: kind, localPath: lp, remotePath: rp, isDirectory: false, local: lsum, remote: rsum))
                 }
             } else {
@@ -141,6 +188,31 @@ public actor Synchronizer {
                 actions.append(SyncAction(kind: .deleteRemote, localPath: lp, remotePath: rp, isDirectory: r.isDirectory, local: nil, remote: rsum))
             }
         }
+    }
+
+    private static func forcedKind(_ l: Entry, _ r: Entry, _ o: SyncOptions) -> SyncAction.Kind? {
+        switch o.direction {
+        case .toRemote: return .uploadUpdate
+        case .toLocal: return .downloadUpdate
+        case .both:
+            guard let lm = l.modified, let rm = r.modified, Int(lm.timeIntervalSince1970) != Int(rm.timeIntervalSince1970) else { return nil }
+            return lm > rm ? .uploadUpdate : .downloadUpdate
+        }
+    }
+
+    static func sha256(_ path: String) throws -> String {
+        guard let handle = FileHandle(forReadingAtPath: path), let ctx = EVP_MD_CTX_new() else {
+            throw RemoteError(.failure, "Cannot read \(path)")
+        }
+        defer { EVP_MD_CTX_free(ctx); try? handle.close() }
+        EVP_DigestInit_ex(ctx, EVP_sha256(), nil)
+        while let chunk = try? handle.read(upToCount: 1 << 20), !chunk.isEmpty {
+            _ = chunk.withUnsafeBytes { EVP_DigestUpdate(ctx, $0.baseAddress, chunk.count) }
+        }
+        var digest = [UInt8](repeating: 0, count: 32)
+        var length: UInt32 = 0
+        EVP_DigestFinal_ex(ctx, &digest, &length)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private static func updateKind(local l: Entry, remote r: Entry, _ o: SyncOptions) -> SyncAction.Kind? {
@@ -189,6 +261,14 @@ public actor Synchronizer {
                               progress, onProgress)
             case .deleteRemote:
                 try await fs.delete(action.remotePath, isDirectory: action.isDirectory)
+            case .setRemoteTime:
+                if let date = action.local?.modified { try await fs.setModified(action.remotePath, date) }
+            case .setLocalTime:
+                if let date = action.remote?.modified {
+                    do { try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: action.localPath) } catch {
+                        throw localError(URL(fileURLWithPath: action.localPath), error)
+                    }
+                }
             case .deleteLocal:
                 do {
                     #if canImport(Darwin)

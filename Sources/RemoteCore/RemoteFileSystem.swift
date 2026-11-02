@@ -19,6 +19,7 @@ public protocol RemoteFileSystem: Actor {
     func setPermissions(_ path: String, _ permissions: Permissions) async throws
     func setModified(_ path: String, _ date: Date) async throws
     func setOwner(_ path: String, owner: String?, group: String?) async throws
+    func checksums(_ paths: [String]) async throws -> [String: String]?
     nonisolated var supportsOwnership: Bool { get }
     func createSymlink(_ path: String, target: String) async throws
 
@@ -37,6 +38,29 @@ extension RemoteFileSystem {
     public func setOwner(_ path: String, owner: String?, group: String?) async throws {
         throw RemoteError(.unsupported, "Cannot change the owner of \(path) over this protocol.")
     }
+
+    public func checksums(_ paths: [String]) async throws -> [String: String]? { nil }
+}
+
+func checksumCommand(_ paths: [String]) -> String {
+    let list = paths.map(RemotePath.shellQuote).joined(separator: " ")
+    return """
+    if command -v sha256sum >/dev/null 2>&1; then sha256sum -- \(list); \
+    elif command -v shasum >/dev/null 2>&1; then shasum -a 256 -- \(list); else sha256 -r \(list); fi
+    """
+}
+
+func parseChecksums(_ output: String, _ paths: [String]) -> [String: String] {
+    var result: [String: String] = [:]
+    let wanted = Set(paths)
+    for line in output.split(separator: "\n") {
+        let hash = line.prefix(64)
+        guard hash.count == 64, hash.allSatisfy(\.isHexDigit) else { continue }
+        var path = line.dropFirst(64).drop(while: { $0 == " " })
+        if path.hasPrefix("*") { path = path.dropFirst() }
+        if wanted.contains(String(path)) { result[String(path)] = hash.lowercased() }
+    }
+    return result
 }
 
 func chownCommand(_ path: String, owner: String?, group: String?) -> String? {

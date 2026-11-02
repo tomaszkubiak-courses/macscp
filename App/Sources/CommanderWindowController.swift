@@ -311,6 +311,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         if keepUpToDate == nil {
             let model = KeepUpToDateModel(session: session, localDir: local.path, remoteDir: remote.path)
             model.onChange = { [weak self] in self?.remote.refresh(nil) }
+            model.onLocalChange = { [weak self] in self?.local.refresh(nil) }
             keepUpToDate = KeepUpToDateWindowController(model: model, title: window?.title ?? "")
         }
         keepUpToDate?.showWindow(nil)
@@ -334,7 +335,10 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     #if DEBUG
     func debugCompare() { syncModel?.compare() }
-    func debugStartKeep() { keepUpToDate?.model.start() }
+    func debugStartKeep(downloading: Bool = false) {
+        keepUpToDate?.model.downloading = downloading
+        keepUpToDate?.model.start()
+    }
     func debugEditorInsert(_ text: String) { edits.debugInsertAndSave(text) }
     func debugConsole(_ command: String) {
         openConsole(nil)

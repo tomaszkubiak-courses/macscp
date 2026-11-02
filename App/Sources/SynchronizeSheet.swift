@@ -164,6 +164,8 @@ struct SynchronizeSheet: View {
                     Toggle("Compare by time", isOn: $model.options.byTime)
                     Toggle("Compare by size", isOn: $model.options.bySize)
                         .disabled(model.options.direction == .both)
+                    Toggle("Compare contents by checksum (SFTP and SCP)", isOn: $model.options.byChecksum)
+                    Toggle("Synchronize timestamps only (no file transfers)", isOn: $model.options.timestampsOnly)
                     TextField("File mask", text: $model.options.transfer.includeMask, prompt: Text("| .git/; *.tmp"))
                     Toggle("Exclude hidden files", isOn: $model.options.transfer.excludeHiddenFiles)
                 }
@@ -247,7 +249,8 @@ struct SynchronizeSheet: View {
     }
 
     private func relative(_ a: SyncAction) -> String {
-        let (path, base) = a.isDownload || a.kind == .deleteLocal ? (a.localPath, model.localDir) : (a.remotePath, model.remoteDir)
+        let (path, base) = a.isDownload || a.kind == .deleteLocal || a.kind == .setLocalTime
+            ? (a.localPath, model.localDir) : (a.remotePath, model.remoteDir)
         let prefix = base.hasSuffix("/") ? base : base + "/"
         return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
     }
@@ -257,6 +260,7 @@ struct SynchronizeSheet: View {
         case .uploadNew, .uploadUpdate: "arrow.up.circle"
         case .downloadNew, .downloadUpdate: "arrow.down.circle"
         case .deleteRemote, .deleteLocal: "trash"
+        case .setRemoteTime, .setLocalTime: "clock.arrow.circlepath"
         }
     }
 
@@ -272,9 +276,11 @@ struct SynchronizeSheet: View {
         case .downloadUpdate: String(localized: "Download newer")
         case .deleteRemote: String(localized: "Delete on server")
         case .deleteLocal: String(localized: "Move to Trash")
+        case .setRemoteTime: String(localized: "Set the server file's time")
+        case .setLocalTime: String(localized: "Set the local file's time")
         }
         if a.isDirectory { return what + " · " + String(localized: "folder") }
-        let summary: FileSummary? = (a.isDownload || a.kind == .deleteRemote) ? a.remote : a.local
+        let summary: FileSummary? = (a.isDownload || a.kind == .deleteRemote || a.kind == .setLocalTime) ? a.remote : a.local
         guard let summary else { return what }
         return "\(what) · \(Format.size(summary.size)) · \(Format.date(summary.modified))"
     }
