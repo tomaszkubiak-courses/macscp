@@ -1,18 +1,19 @@
 # MacSCP
 
-A native macOS SFTP and SCP client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
+A native macOS SFTP, SCP and FTP client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
 
 [![CI](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml/badge.svg)](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/tomaszkubiak-courses/macscp)](https://github.com/tomaszkubiak-courses/macscp/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org).
+MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org) and [libcurl](https://curl.se/libcurl/).
 
-> **Status: beta.** Version 0.2.0 adds directory synchronization. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
+> **Status: beta.** Version 0.3.0 adds FTP and FTPS. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
 
 ## Features
 
 - **SFTP and SCP**, including SCP to servers with a BusyBox or BSD userland.
+- **FTP and FTPS** with explicit or implicit TLS. Untrusted server certificates are shown before connecting and can be trusted once or saved.
 - **Logins:**
   - Password, keyboard-interactive (one-time codes), private keys (with passphrase), ssh-agent and Kerberos (GSSAPI).
   - Saved passwords are kept in the macOS Keychain.
