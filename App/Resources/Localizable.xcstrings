@@ -135,6 +135,9 @@
     "Check for Updates…" : {
 
     },
+    "Choose WinSCP.ini, or a .reg export of WinSCP's registry key." : {
+
+    },
     "Choose an editor" : {
 
     },
@@ -340,6 +343,12 @@
 
     },
     "Ignore permission errors" : {
+
+    },
+    "Import from WinSCP…" : {
+
+    },
+    "Imported %lld sites from WinSCP." : {
 
     },
     "Jump hosts, proxies and other options come from ~/.ssh/config." : {
@@ -641,6 +650,9 @@
     "Skip" : {
 
     },
+    "Skipped, because MacSCP does not support their protocol yet: %@." : {
+
+    },
     "Source" : {
 
     },
@@ -730,6 +742,9 @@
           }
         }
       }
+    },
+    "These sites used private keys at Windows paths: %@. Copy the key files to this Mac, then choose them under Advanced. PuTTY .ppk keys work as they are." : {
+
     },
     "Transfer of “%@” failed" : {
 

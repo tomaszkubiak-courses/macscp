@@ -9,7 +9,7 @@ mkdir -p /keys
 [ -f /keys/id_ed25519 ] || ssh-keygen -q -t ed25519 -N '' -f /keys/id_ed25519
 [ -f /keys/id_encrypted ] || ssh-keygen -q -t ed25519 -N 'test-pass' -f /keys/id_encrypted
 install -d -m 700 -o macscp -g macscp /home/macscp/.ssh
-cat /keys/id_ed25519.pub /keys/id_encrypted.pub > /home/macscp/.ssh/authorized_keys
+cat /keys/id_ed25519.pub /keys/id_encrypted.pub "$(dirname "$0")/../Tests/RemoteCoreTests/Fixtures/rsa-v2-enc.pub" > /home/macscp/.ssh/authorized_keys
 chown macscp:macscp /home/macscp/.ssh/authorized_keys
 chmod 600 /home/macscp/.ssh/authorized_keys
 

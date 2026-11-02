@@ -226,6 +226,9 @@ final class SSHConnection {
                                 isolation: isolated (any Actor)? = #isolation) async throws -> ssh_key {
         var key: ssh_key?
         let expanded = (path as NSString).expandingTildeInPath
+        if let text = try? String(contentsOfFile: expanded, encoding: .utf8), PuTTYKey.isPPK(text) {
+            return try await loadPuTTYKey(text, path: path, prompter: prompter)
+        }
         switch ssh_pki_import_privkey_file(expanded, nil, nil, nil, &key) {
         case SSH_OK: return key!
         case SSH_EOF: throw RemoteError(.authentication, "Private key not found: \(path)")
@@ -237,6 +240,28 @@ final class SSHConnection {
         }
         guard ssh_pki_import_privkey_file(expanded, passphrase, nil, nil, &key) == SSH_OK, let key else {
             throw RemoteError(.authentication, "Cannot load private key \(path). Wrong passphrase or unsupported format.")
+        }
+        return key
+    }
+
+    private func loadPuTTYKey(_ text: String, path: String, prompter: any ConnectionPrompter,
+                              isolation: isolated (any Actor)? = #isolation) async throws -> ssh_key {
+        var passphrase: String?
+        if PuTTYKey.isEncrypted(text) {
+            passphrase = await prompter.passphrase(keyPath: path)
+            guard passphrase != nil else { throw RemoteError(.cancelled, "Authentication cancelled.") }
+        }
+        let pem: String
+        do {
+            pem = try PuTTYKey.openSSH(text, passphrase: passphrase)
+        } catch PuTTYKey.Failure.wrongPassphrase, PuTTYKey.Failure.needsPassphrase {
+            throw RemoteError(.authentication, "Cannot load private key \(path). Wrong passphrase.")
+        } catch {
+            throw RemoteError(.authentication, "Cannot load PuTTY key \(path): \(error)")
+        }
+        var key: ssh_key?
+        guard ssh_pki_import_privkey_base64(pem, nil, nil, nil, &key) == SSH_OK, let key else {
+            throw RemoteError(.authentication, "Cannot load PuTTY key \(path).")
         }
         return key
     }

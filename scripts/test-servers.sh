@@ -29,7 +29,7 @@ start)
   [ -f "$DIR/host_ed25519" ] || ssh-keygen -q -t ed25519 -N '' -f "$DIR/host_ed25519"
   [ -f "$DIR/id_ed25519" ] || ssh-keygen -q -t ed25519 -N '' -f "$DIR/id_ed25519"
   [ -f "$DIR/id_encrypted" ] || ssh-keygen -q -t ed25519 -N 'test-pass' -f "$DIR/id_encrypted"
-  cat "$DIR/id_ed25519.pub" "$DIR/id_encrypted.pub" > "$DIR/authorized_keys"
+  cat "$DIR/id_ed25519.pub" "$DIR/id_encrypted.pub" "$ROOT/Tests/RemoteCoreTests/Fixtures/rsa-v2-enc.pub" > "$DIR/authorized_keys"
   chmod 600 "$DIR/authorized_keys"
   cat > "$DIR/sshd_config" <<CONF
 Port $SSHD_PORT

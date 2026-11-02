@@ -18,7 +18,7 @@ let package = Package(
     targets: [
         cssh,
         .target(name: "RemoteCore", dependencies: ["CSSH"]),
-        .testTarget(name: "RemoteCoreTests", dependencies: ["RemoteCore"]),
+        .testTarget(name: "RemoteCoreTests", dependencies: ["RemoteCore"], exclude: ["Fixtures"]),
 
         .executableTarget(name: "sftp-bench", dependencies: ["CSSH"]),
     ]

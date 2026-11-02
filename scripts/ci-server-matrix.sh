@@ -6,8 +6,9 @@ KEYS=${KEYS:-/tmp/keys}
 mkdir -p "$KEYS"
 [ -f "$KEYS/id_ed25519" ] || ssh-keygen -q -t ed25519 -N '' -f "$KEYS/id_ed25519"
 [ -f "$KEYS/id_encrypted" ] || ssh-keygen -q -t ed25519 -N 'test-pass' -f "$KEYS/id_encrypted"
-cat "$KEYS/id_ed25519.pub" "$KEYS/id_encrypted.pub" > "$KEYS/authorized_keys"
-for k in id_ed25519 id_encrypted; do ssh-keygen -e -f "$KEYS/$k.pub"; done > "$KEYS/authorized_keys.rfc4716"
+cp "$(dirname "$0")/../Tests/RemoteCoreTests/Fixtures/rsa-v2-enc.pub" "$KEYS/ppk.pub"
+cat "$KEYS/id_ed25519.pub" "$KEYS/id_encrypted.pub" "$KEYS/ppk.pub" > "$KEYS/authorized_keys"
+for k in id_ed25519 id_encrypted ppk; do ssh-keygen -e -f "$KEYS/$k.pub"; done > "$KEYS/authorized_keys.rfc4716"
 chmod 644 "$KEYS"/*.pub "$KEYS"/authorized_keys*
 
 USER_SETUP='

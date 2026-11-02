@@ -1,6 +1,7 @@
 import AppKit
 import RemoteCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 @Observable
@@ -121,6 +122,35 @@ final class SiteManagerModel {
         }
     }
 
+    func importWinSCP() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = ["ini", "reg"].compactMap { UTType(filenameExtension: $0) }
+        panel.message = String(localized: "Choose WinSCP.ini, or a .reg export of WinSCP's registry key.")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let result: WinSCPImportResult
+        do { result = WinSCPImport.parse(try Data(contentsOf: url)) } catch { self.error = "\(error)"; return }
+        for imported in result.sites {
+            sites.append(imported.site)
+            if let p = imported.password, !p.isEmpty { try? Keychain.setPassword(p, for: imported.site.id) }
+        }
+        do { try store.save(sites) } catch { self.error = "\(error)"; return }
+        var info: [String] = []
+        let keys = result.sites.filter { $0.windowsKeyFile != nil }
+        if !keys.isEmpty {
+            info.append(String(localized: """
+            These sites used private keys at Windows paths: \(keys.map(\.site.name).joined(separator: ", ")). \
+            Copy the key files to this Mac, then choose them under Advanced. PuTTY .ppk keys work as they are.
+            """))
+        }
+        if !result.skipped.isEmpty {
+            info.append(String(localized: "Skipped, because MacSCP does not support their protocol yet: \(result.skipped.joined(separator: ", "))."))
+        }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Imported \(result.sites.count) sites from WinSCP.")
+        alert.informativeText = info.joined(separator: "\n\n")
+        alert.runModal()
+    }
+
     func chooseKey() {
         let panel = NSOpenPanel()
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")
@@ -221,6 +251,7 @@ struct SiteManagerView: View {
                 HStack {
                     Button(model.isSaved ? "Save" : "Save Site") { model.save() }
                     if model.isSaved { Button("Delete", role: .destructive) { model.delete() } }
+                    Button("Import from WinSCP…") { model.importWinSCP() }
                     Spacer()
                     if model.connecting { ProgressView().controlSize(.small) }
                     Button("Login") { model.login() }

@@ -147,7 +147,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         guard !s.fileProtocol.isS3 else { return NSSound.beep() }
         var args = ["ssh"]
         if let port = s.port, !s.fileProtocol.isFTP { args += ["-p", String(port)] }
-        if let key = s.privateKeyPath, !key.isEmpty { args += ["-i", key] }
+        if let key = s.privateKeyPath, !key.isEmpty, !key.lowercased().hasSuffix(".ppk") { args += ["-i", key] }
         args.append(s.user.isEmpty ? s.host : "\(s.user)@\(s.host)")
         args += ["-t", "cd \(RemotePath.shellQuote(remote.path)) && exec \"$SHELL\" -l"]
         let script = "#!/bin/sh\nexec " + args.map(RemotePath.shellQuote).joined(separator: " ") + "\n"
