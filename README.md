@@ -10,7 +10,7 @@ A native macOS SFTP, SCP, FTP, WebDAV and Amazon S3 client with a dual-pane Comm
 
 MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org) and [libcurl](https://curl.se/libcurl/).
 
-> **Status: beta.** Version 0.4.7 adds WebDAV, WinSCP site import, PuTTY keys, a built-in editor, Find Files, a console with custom commands, and proxies. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
+> **Status: beta.** Version 0.4.8 is translated into Polish, German, French and Spanish. Version 0.4.7 added WebDAV, WinSCP site import, PuTTY keys, a built-in editor, Find Files, a console with custom commands, and proxies. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
 
 ## Features
 
@@ -51,10 +51,11 @@ MacSCP brings WinSCP's way of working to the Mac: local files on the left, the s
   - Compare and sync a local and a remote folder, in either or both directions, with a preview before anything changes.
   - Compare by time, size or checksum, or synchronize timestamps only.
   - **Keep Folders Up to Date** uploads local changes as you save them, or checks the server and downloads its changes.
+- **Languages:** English, Polish, German, French and Spanish, following your macOS language settings.
 
 ## Requirements
 
-macOS 14 Sonoma or later, on Apple silicon or Intel. MacSCP is available in English, Polish, German, French and Spanish.
+macOS 14 Sonoma or later, on Apple silicon or Intel.
 
 ## Installation
 
@@ -107,11 +108,19 @@ To bring your WinSCP sites over, export them in WinSCP (Tools › Export/Backup 
 | Compare directories | ⇧⌘C |
 | Find files | ⇧⌘F |
 | Console | ⌥⌘T |
-| Find in editor / Go to line | ⌘F / ⌘L |
+| Editor: save / find / go to line / wrap lines | ⌘S / ⌘F / ⌘L / ⌥⌘W |
 | Edited files | ⇧⌘E |
 | Open in Terminal | ⇧⌘T |
 
 Coming from WinSCP? Turn on **Commander keys** in Settings for F2 (rename), F4 (edit), F5 (copy), F7 (new folder) and F8 (delete).
+
+## Known limitations
+
+- **S3 and WebDAV** have no permissions, links or settable file times; the time shown is the upload time. Interrupted transfers start over instead of resuming.
+- **FTP** cannot create links. Servers that only list with `LIST` (for example vsftpd) give file times to the minute, so Synchronize compares them roughly.
+- **The console** runs commands without a terminal, so interactive programs such as `vim` or `top` do not work. Custom commands and the console need a server that allows running commands (SFTP and SCP).
+- **SSH proxies** come from the site's proxy settings or from `~/.ssh/config` (`ProxyJump`, `ProxyCommand`).
+- **VoiceOver** has labels on the main controls but has not had a full review. Please report anything that does not work.
 
 ## Building from source
 
@@ -127,17 +136,17 @@ open MacSCP.xcodeproj          # or: xcodebuild -project MacSCP.xcodeproj -schem
 
 ### Tests
 
-Unit tests run with `swift test`. Integration tests need SSH, FTP and S3 servers; the repository starts throwaway ones on localhost:
+Unit tests run with `swift test`. Integration tests need SSH, FTP, S3 and WebDAV servers and two proxies; the repository starts throwaway ones on localhost. The FTP and WebDAV servers (pyftpdlib, WsgiDAV) are installed into Python virtual environments under `build/` on first start.
 
 ```sh
 brew install dropbear versitygw
-scripts/test-servers.sh start  # OpenSSH :2222, Dropbear :2223, FTP/FTPS :2121, S3 :9000/:9001, WebDAV :8080/:8443
+scripts/test-servers.sh start  # OpenSSH :2222, Dropbear :2223, FTP/FTPS :2121, S3 :9000/:9001, WebDAV :8080/:8443, proxies :1080/:3128
 MACSCP_INTEGRATION=1 swift test
 scripts/test-servers.sh stop
 ```
 
 CI runs the integration suite against:
-- OpenSSH, Dropbear, pyftpdlib (FTP and FTPS), versitygw (S3) and WsgiDAV (WebDAV), over HTTP and HTTPS where it applies, on macOS and Linux, including password logins.
+- OpenSSH, Dropbear, pyftpdlib (FTP and FTPS), versitygw (S3) and WsgiDAV (WebDAV), over HTTP and HTTPS where it applies, directly and through SOCKS5 and HTTP proxies, on macOS and Linux, including password logins.
 - OpenSSH 7.4, a BusyBox userland, ProFTPD over SFTP, FTP, and explicit and implicit FTPS, vsftpd, and Apache WebDAV.
 
 ### Project layout
@@ -145,18 +154,21 @@ CI runs the integration suite against:
 | Path | Contents |
 | --- | --- |
 | `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP, FTP/FTPS, S3 and WebDAV, proxies, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
-| `App/Sources` | The macOS app: Commander window, panes, queue, dialogs. |
-| `Tests/RemoteCoreTests` | Unit and integration tests. |
-| `scripts` | Building libssh and libcurl, test servers, benchmarks, releases. |
+| `App/Sources` | The macOS app: Commander window, panes, queue, dialogs, editor, console. |
+| `App/Resources` | String Catalog with the translations, and the app icon. |
+| `App/Icon` | The app icon's SVG source. |
+| `Tests/RemoteCoreTests` | Unit and integration tests, with PuTTY key fixtures. |
+| `scripts` | Building libssh and libcurl, test servers and proxies, benchmarks, releases. |
 
 ## Roadmap
 
-- **Next:** getting ready for 1.0: testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass. More languages are welcome.
-- **1.0** follows after testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass.
+- **Next:** getting ready for 1.0: testing against Amazon S3 and other storage providers, more FTP servers and hosting providers, and the Windows OpenSSH server, then a week of daily use.
+- **1.0** follows when that is done.
+- Reviews of the translations, and new languages, are welcome.
 
 ## Relationship to WinSCP
 
-MacSCP is an independent project. It is not affiliated with or endorsed by WinSCP or its author, Martin Přikryl. WinSCP's source code serves as the reference for MacSCP's behavior. Logic ported from it (listing parser, file masks, transfer options, synchronization rules, SCP protocol handling) keeps the original GPL-3 attribution.
+MacSCP is an independent project. It is not affiliated with or endorsed by WinSCP or its author, Martin Přikryl. WinSCP's source code serves as the reference for MacSCP's behavior. Logic ported from it (listing parser, file masks, transfer options, synchronization rules, SCP protocol handling, site import) keeps the original GPL-3 attribution. Custom commands use WinSCP's pattern syntax.
 
 ## License
 
