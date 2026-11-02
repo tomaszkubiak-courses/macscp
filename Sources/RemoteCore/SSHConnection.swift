@@ -120,6 +120,9 @@ final class SSHConnection {
         if let kh = p.knownHostsPath { ssh_options_set(session, SSH_OPTIONS_KNOWNHOSTS, kh) }
         var timeout = Int(p.timeoutSeconds)
         ssh_options_set(session, SSH_OPTIONS_TIMEOUT, &timeout)
+        if var level = ProcessInfo.processInfo.environment["MACSCP_SSH_DEBUG"].flatMap({ Int32($0) }) {
+            ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &level)
+        }
 
         var user: UnsafeMutablePointer<CChar>?
         ssh_options_get(session, SSH_OPTIONS_USER, &user)

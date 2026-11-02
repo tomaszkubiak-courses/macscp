@@ -90,8 +90,8 @@ jobs:
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build pkg-config libssl-dev \
                 zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
               scripts/build-cssh.sh && swift build --build-tests >/dev/null &&
-              (LIBSSH_DEBUG=4 MACSCP_TEST_SERVERS=openssh74:2225 swift test --skip-build --filter testPuTTYKeyLogsIn 2>&1 |
-                grep -iE "rsa|signature|ext_info|server-sig|publickey|userauth" | head -120 || true) &&
+              (MACSCP_SSH_DEBUG=4 MACSCP_TEST_SERVERS=openssh74:2225 swift test --skip-build --filter testPuTTYKeyLogsIn 2>&1 |
+                grep -iE "extension|server-sig|signature|not allowed|publickey|userauth|rsa" | head -120 || true) &&
               scripts/ci-run-tests.sh --filter IntegrationTests'
       - name: Server logs
         if: failure()
