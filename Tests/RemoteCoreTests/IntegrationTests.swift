@@ -10,6 +10,7 @@ final class IntegrationTests: XCTestCase {
         var password: String?
         var home: String?
         var coarseListingTimes = false
+        var hasShell = true
     }
 
     static let env = ProcessInfo.processInfo.environment
@@ -20,6 +21,7 @@ final class IntegrationTests: XCTestCase {
         let p = $0.split(separator: ":")
         var s = Server(name: String(p[0]), port: Int(p[1])!)
         if p.count > 2 { s.protocols = p[2].split(separator: "+").compactMap { FileProtocol(rawValue: String($0)) } }
+        s.hasShell = !(p.count > 3 && p[3] == "noshell")
         return s
     }
     let ftpServers: [Server] = (env["MACSCP_TEST_FTP_SERVERS"] ?? "pyftpd:2121:ftp+ftps").split(separator: ",").map {

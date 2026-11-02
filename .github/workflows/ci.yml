@@ -83,7 +83,7 @@ jobs:
         run: |
           docker run --rm --network host --cap-add=SYS_PTRACE -v "$PWD:/src" -v /tmp/keys:/keys -w /src \
             -e MACSCP_INTEGRATION=1 -e MACSCP_TEST_USER=macscp -e MACSCP_TEST_PASSWORD=Test-pass-1 -e MACSCP_TEST_KEYS=/keys \
-            -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp \
+            -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp:noshell \
             -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit,vsftpd:2129:ftp+ftps:coarse -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 -e MACSCP_TEST_S3_SERVERS= \
             swift:6.2-noble bash -c '
               apt-get update -q >/dev/null &&

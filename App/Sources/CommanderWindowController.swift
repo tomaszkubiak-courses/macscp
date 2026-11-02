@@ -137,6 +137,12 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         case #selector(toggleHiddenFiles(_:)): item.state = UserDefaults.standard.bool(forKey: Preferences.showHidden) ? .on : .off
         case #selector(toggleQueue(_:)): item.state = outerSplit.splitViewItems[1].isCollapsed ? .off : .on
         case #selector(openInTerminal(_:)): return !session.site.fileProtocol.isS3
+        case #selector(openConsole(_:)): return !session.site.fileProtocol.isS3
+        case #selector(runCustomCommand(_:)):
+            let proto = session.site.fileProtocol
+            guard proto == .sftp || proto == .scp, let id = item.representedObject as? String,
+                  let command = ConsoleModel.customCommands.first(where: { $0.id.uuidString == id }) else { return false }
+            return !command.usesFiles || remote.selectedItems.contains { command.applyToDirectories || !$0.isDirectory }
         default: break
         }
         return true
@@ -214,6 +220,63 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     private var keepUpToDate: KeepUpToDateWindowController?
 
     private var findFiles: FindFilesWindowController?
+    private var console: ConsoleWindowController?
+
+    private var consoleModel: ConsoleModel {
+        if console == nil {
+            let model = ConsoleModel(session: session, directory: remote.path)
+            model.onFinish = { [weak self] in self?.remote.refresh(nil) }
+            console = ConsoleWindowController(model: model, title: window?.title ?? "")
+        }
+        return console!.model
+    }
+
+    @objc func openConsole(_ sender: Any?) {
+        let model = consoleModel
+        if !model.running { model.directory = remote.path }
+        console?.showWindow(nil)
+    }
+
+    @objc func runCustomCommand(_ sender: Any?) {
+        guard let id = (sender as? NSMenuItem)?.representedObject as? String,
+              let command = ConsoleModel.customCommands.first(where: { $0.id.uuidString == id }) else { return }
+        let model = consoleModel
+        guard !model.running else { return NSSound.beep() }
+        let items = remote.selectedItems.filter { command.applyToDirectories || !$0.isDirectory }
+        if command.usesFiles && items.isEmpty { return NSSound.beep() }
+        let site = session.site
+        let context = CustomCommand.Context(directory: remote.path, host: site.host, user: site.user, port: site.port,
+                                            sessionName: site.name)
+        Task {
+            var answers: [String] = []
+            for p in command.prompts {
+                guard let a = await Alerts.ask(p.prompt.isEmpty ? command.name : p.prompt, value: p.defaultValue, in: window) else { return }
+                answers.append(a)
+            }
+            let names = items.map(\.name)
+            let runs = command.runsOncePerFile
+                ? names.map { command.expand(file: $0, files: names, answers: answers, context: context) }
+                : [command.expand(file: nil, files: names, answers: answers, context: context)]
+            model.directory = remote.path
+            if command.showOutput { console?.showWindow(nil) }
+            for line in runs {
+                let result = await model.run(line).value
+                if !command.showOutput, result?.exitCode != 0 {
+                    let output = result.map { [$0.output, $0.errorOutput].joined() } ?? String(localized: "See the console for details.")
+                    await Alerts.error(RemoteError(.failure, "\(command.name): \(output)"), in: window)
+                    break
+                }
+            }
+        }
+    }
+
+    @objc func editCustomCommands(_ sender: Any?) {
+        var host: NSHostingController<CustomCommandsEditor>?
+        host = NSHostingController(rootView: CustomCommandsEditor(close: { [weak self] in
+            if let host { self?.window?.contentViewController?.dismiss(host) }
+        }))
+        window?.contentViewController?.presentAsSheet(host!)
+    }
 
     @objc func findFiles(_ sender: Any?) {
         if findFiles == nil {
@@ -273,6 +336,10 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     func debugCompare() { syncModel?.compare() }
     func debugStartKeep() { keepUpToDate?.model.start() }
     func debugEditorInsert(_ text: String) { edits.debugInsertAndSave(text) }
+    func debugConsole(_ command: String) {
+        openConsole(nil)
+        console?.model.run(command)
+    }
     func debugFind(_ mask: String) {
         findFiles?.model.mask = mask
         findFiles?.model.start()
@@ -328,6 +395,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         keepUpToDate = nil
         findFiles?.close()
         findFiles = nil
+        console?.close()
+        console = nil
         let s = session
         let e = edits!
         e.closeEditors()
@@ -368,6 +437,7 @@ extension CommanderWindowController: NSToolbarDelegate {
         ("sync", "Synchronize", "arrow.triangle.2.circlepath", #selector(CommanderWindowController.synchronize(_:))),
         ("compare", "Compare Directories", "arrow.left.arrow.right", #selector(CommanderWindowController.compareDirectories(_:))),
         ("find", "Find Files", "magnifyingglass", #selector(CommanderWindowController.findFiles(_:))),
+        ("console", "Console", "chevron.left.forwardslash.chevron.right", #selector(CommanderWindowController.openConsole(_:))),
         ("edit", "Edit", "pencil", #selector(FilePaneViewController.editSelection(_:))),
         ("newFolder", "New Folder", "folder.badge.plus", #selector(FilePaneViewController.newFolder(_:))),
         ("delete", "Delete", "trash", #selector(FilePaneViewController.deleteSelection(_:))),
@@ -390,7 +460,7 @@ extension CommanderWindowController: NSToolbarDelegate {
 
     nonisolated func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         ["transfer", "sync", "compare", "find", "edit", "newFolder", "delete", "info", NSToolbarItem.Identifier.flexibleSpace.rawValue,
-         "hidden", "refresh", "queue", "edited", "terminal"].map { NSToolbarItem.Identifier($0) }
+         "hidden", "refresh", "queue", "edited", "console", "terminal"].map { NSToolbarItem.Identifier($0) }
     }
 
     nonisolated func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {

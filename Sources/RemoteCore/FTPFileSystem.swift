@@ -147,6 +147,12 @@ public actor FTPFileSystem: RemoteFileSystem {
         return nil
     }
 
+    func rawCommand(_ text: String) throws -> [String] {
+        let x = try command(["*" + text], "run", text)
+        guard let start = x.replies.lastIndex(where: { $0.hasPrefix("257 ") || $0.hasPrefix("230 ") }) else { return x.replies }
+        return Array(x.replies[(start + 1)...])
+    }
+
     public func homeDirectory() -> String { home }
 
     public func canonicalPath(_ path: String) -> String { RemotePath.normalize(path, home: home) }

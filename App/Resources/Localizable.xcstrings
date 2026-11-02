@@ -4,6 +4,9 @@
     "" : {
 
     },
+    "! file name, !& selected files, !/ current folder, !@ host, !U user, !# port, !N site name, !?Prompt:?default! asks for a value, !! a literal !. Names and answers are quoted for the shell." : {
+
+    },
     "%@ (%lld B)" : {
       "localizations" : {
         "en" : {
@@ -87,6 +90,9 @@
     "Access key ID" : {
 
     },
+    "Add" : {
+
+    },
     "Add X to directories" : {
 
     },
@@ -112,6 +118,9 @@
 
     },
     "Apply to all remaining files" : {
+
+    },
+    "Apply to folders" : {
 
     },
     "Ask before overwriting files" : {
@@ -156,7 +165,16 @@
     "Closing the session cancels them." : {
 
     },
+    "Command" : {
+
+    },
     "Commander keys (F2 rename, F4 edit, F5 copy, F7 new folder, F8 delete)" : {
+
+    },
+    "Commands are sent to the FTP server as they are, for example SITE or STAT.\n" : {
+
+    },
+    "Commands run without a terminal: interactive programs such as vim or top do not work." : {
 
     },
     "Common" : {
@@ -189,6 +207,12 @@
     "Connected" : {
 
     },
+    "Console — %@" : {
+
+    },
+    "Console…" : {
+
+    },
     "Continue connecting to a server with an untrusted certificate?" : {
 
     },
@@ -202,6 +226,9 @@
 
     },
     "Create" : {
+
+    },
+    "Custom Commands" : {
 
     },
     "Cut" : {
@@ -259,6 +286,9 @@
 
     },
     "Edit" : {
+
+    },
+    "Edit Custom Commands…" : {
 
     },
     "Edit With…" : {
@@ -469,6 +499,9 @@
     "Never" : {
 
     },
+    "New Command" : {
+
+    },
     "New Folder…" : {
 
     },
@@ -624,6 +657,9 @@
     "Remote → Local" : {
 
     },
+    "Remove" : {
+
+    },
     "Rename" : {
 
     },
@@ -634,6 +670,9 @@
 
     },
     "Replace" : {
+
+    },
+    "Restore Defaults" : {
 
     },
     "Resume" : {
@@ -678,7 +717,13 @@
     "Secret access key" : {
 
     },
+    "See the console for details." : {
+
+    },
     "Select All" : {
+
+    },
+    "Select a command." : {
 
     },
     "Server authentication" : {
@@ -718,6 +763,9 @@
 
     },
     "Show in Remote Pane" : {
+
+    },
+    "Show output in the console" : {
 
     },
     "Site name" : {
@@ -840,6 +888,9 @@
     "These sites used private keys at Windows paths: %@. Copy the key files to this Mac, then choose them under Advanced. PuTTY .ppk keys work as they are." : {
 
     },
+    "This session has no command line.\n" : {
+
+    },
     "Transfer of “%@” failed" : {
 
     },
@@ -856,6 +907,9 @@
 
     },
     "Undo" : {
+
+    },
+    "Untitled" : {
 
     },
     "Update Key" : {
@@ -934,6 +988,9 @@
 
     },
     "Zoom" : {
+
+    },
+    "[exit code %lld]\n" : {
 
     },
     "e.g. Work/Production" : {

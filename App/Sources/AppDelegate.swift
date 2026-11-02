@@ -66,6 +66,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     commanders.last?.keepRemoteUpToDate(nil)
                     commanders.last?.debugStartKeep()
                 }
+                if let command = d.string(forKey: "MacSCPDebugConsole") {
+                    try? await Task.sleep(for: .seconds(2))
+                    commanders.last?.debugConsole(command)
+                }
                 if d.bool(forKey: "MacSCPDebugCompare") {
                     try? await Task.sleep(for: .seconds(2))
                     commanders.last?.compareDirectories(nil)

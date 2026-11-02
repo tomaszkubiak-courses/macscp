@@ -7,6 +7,7 @@ public actor SFTPFileSystem: RemoteFileSystem {
     public nonisolated var supportsResume: Bool { true }
 
     private let ssh: SSHConnection
+    var sshConnection: SSHConnection { ssh }
 
     private nonisolated(unsafe) var sftp: sftp_session?
 

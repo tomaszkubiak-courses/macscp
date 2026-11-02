@@ -22,6 +22,7 @@ enum MainMenu {
         main.addItem(submenu(String(localized: "Session"), [
             item(String(localized: "New Session…"), #selector(AppDelegate.showSiteManager(_:)), "n"),
             item(String(localized: "Open in Terminal"), #selector(CommanderWindowController.openInTerminal(_:)), "t", [.command, .shift]),
+            item(String(localized: "Console…"), #selector(CommanderWindowController.openConsole(_:)), "t", [.command, .option]),
             item(String(localized: "Edited Files…"), #selector(CommanderWindowController.showEditedFiles(_:)), "e", [.command, .shift]),
             item(String(localized: "Synchronize…"), #selector(CommanderWindowController.synchronize(_:)), "s", [.command, .shift]),
             item(String(localized: "Keep Remote Folder Up to Date…"), #selector(CommanderWindowController.keepRemoteUpToDate(_:)), "u", [.command, .shift]),
@@ -55,6 +56,7 @@ enum MainMenu {
             item(String(localized: "Edit"), #selector(FilePaneViewController.editSelection(_:)), "e"),
             item(String(localized: "Edit With…"), #selector(FilePaneViewController.editSelectionWith(_:)), "e", [.command, .option]),
             item(String(localized: "Edit in MacSCP"), #selector(FilePaneViewController.editSelectionInternally(_:)), "e", [.command, .control]),
+            customCommandsItem(),
             .separator(),
             item(String(localized: "Copy to Other Pane…"), #selector(FilePaneViewController.transferSelection(_:)), "k"),
             item(String(localized: "Rename…"), #selector(FilePaneViewController.renameSelection(_:)), "r", [.command, .shift]),
@@ -111,6 +113,28 @@ enum MainMenu {
         let menu = NSMenu(title: title)
         items.forEach(menu.addItem)
         item.submenu = menu
+        return item
+    }
+
+    private final class CustomCommandsMenu: NSObject, NSMenuDelegate {
+        func menuNeedsUpdate(_ menu: NSMenu) {
+            menu.removeAllItems()
+            for c in ConsoleModel.customCommands {
+                let i = NSMenuItem(title: c.name, action: #selector(CommanderWindowController.runCustomCommand(_:)), keyEquivalent: "")
+                i.representedObject = c.id.uuidString
+                menu.addItem(i)
+            }
+            menu.addItem(.separator())
+            menu.addItem(withTitle: String(localized: "Edit Custom Commands…"),
+                         action: #selector(CommanderWindowController.editCustomCommands(_:)), keyEquivalent: "")
+        }
+    }
+
+    nonisolated(unsafe) private static let customCommandsDelegate = CustomCommandsMenu()
+
+    private static func customCommandsItem() -> NSMenuItem {
+        let item = submenu(String(localized: "Custom Commands"), [])
+        item.submenu?.delegate = customCommandsDelegate
         return item
     }
 

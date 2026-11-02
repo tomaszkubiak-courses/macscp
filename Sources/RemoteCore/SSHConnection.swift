@@ -370,6 +370,7 @@ final class SSHConnection {
             let e = ssh_channel_read_nonblocking(ch, &buf, UInt32(buf.count), 1)
             if e > 0 { err.append(buf, count: Int(e)) }
             if n <= 0, e <= 0, ssh_channel_is_eof(ch) != 0 || ssh_channel_is_closed(ch) != 0 { break }
+            if Task.isCancelled { throw RemoteError(.cancelled, "Command cancelled.") }
         }
         ssh_channel_send_eof(ch)
         var code: UInt32 = 0

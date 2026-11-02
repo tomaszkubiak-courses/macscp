@@ -10,6 +10,7 @@ public actor SCPFileSystem: RemoteFileSystem {
     public nonisolated var supportsResume: Bool { false }
 
     private let ssh: SSHConnection
+    var sshConnection: SSHConnection { ssh }
 
     private var listCommand: String?
 
