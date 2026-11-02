@@ -1,3 +1,5 @@
+<img src="App/Icon/AppIcon.svg" width="128" alt="MacSCP icon">
+
 # MacSCP
 
 A native macOS SFTP, SCP and FTP client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
