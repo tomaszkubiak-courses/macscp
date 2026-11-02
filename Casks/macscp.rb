@@ -4,7 +4,7 @@ cask "macscp" do
 
   url "https://github.com/tomaszkubiak-courses/macscp/releases/download/v#{version}/MacSCP-#{version}.dmg"
   name "MacSCP"
-  desc "SFTP, SCP, FTP and S3 client with a dual-pane Commander window"
+  desc "SFTP, SCP, FTP, WebDAV and S3 client with a dual-pane Commander window"
   homepage "https://github.com/tomaszkubiak-courses/macscp"
 
   livecheck do

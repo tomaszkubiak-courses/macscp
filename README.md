@@ -2,7 +2,7 @@
 
 # MacSCP
 
-A native macOS SFTP, SCP, FTP and Amazon S3 client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
+A native macOS SFTP, SCP, FTP, WebDAV and Amazon S3 client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
 
 [![CI](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml/badge.svg)](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/tomaszkubiak-courses/macscp)](https://github.com/tomaszkubiak-courses/macscp/releases/latest)
@@ -10,7 +10,7 @@ A native macOS SFTP, SCP, FTP and Amazon S3 client with a dual-pane Commander wi
 
 MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org) and [libcurl](https://curl.se/libcurl/).
 
-> **Status: beta.** Version 0.4.0 adds Amazon S3 and S3-compatible storage, and a new app icon. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
+> **Status: beta.** Version 0.4.7 adds WebDAV, WinSCP site import, PuTTY keys, a built-in editor, Find Files, a console with custom commands, and proxies. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
 
 ## Features
 
@@ -19,6 +19,9 @@ MacSCP brings WinSCP's way of working to the Mac: local files on the left, the s
 - **Amazon S3** and S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi and others):
   - Buckets and folders, uploads of any size (large files go up in parts), rename and delete of whole folders.
   - Access keys from the Login window, or from `~/.aws/credentials` and the usual `AWS_*` environment variables.
+- **WebDAV** over HTTPS or HTTP, with Basic or Digest login.
+- **Proxies:** SOCKS5 or HTTP, with an optional login, for every protocol. FTP also offers active mode.
+- **Coming from WinSCP:** import your sites (with folders and saved passwords) from a `WinSCP.ini` or `.reg` export, and use PuTTY `.ppk` keys as they are.
 - **Logins:**
   - Password, keyboard-interactive (one-time codes), private keys (with passphrase), ssh-agent and Kerberos (GSSAPI).
   - Saved passwords are kept in the macOS Keychain.
@@ -35,14 +38,19 @@ MacSCP brings WinSCP's way of working to the Mac: local files on the left, the s
   - Files are written to a temporary `.filepart` file and replace the target only when complete.
   - An overwritten server file keeps its permissions.
   - Local deletions go to the Trash.
-- **Remote editing:**
-  - Open a server file in TextEdit, VS Code, BBEdit, vim or any other editor. Every save is uploaded.
+- **Editing server files:**
+  - A built-in text editor with find and replace, go to line, and the file's encoding and line endings kept as they are.
+  - Or any other editor: TextEdit, VS Code, BBEdit, vim. Every save is uploaded.
   - MacSCP asks before overwriting a file that changed on the server in the meantime.
 - **Drag and drop:** between the panes, from Finder to upload, and to Finder to download.
-- **Get Info** with permission editing, **Quick Look** for local files, and **Open in Terminal** for an `ssh` shell in the current folder.
+- **Get Info** with permission, owner and group editing, **Quick Look** for local files, and **Open in Terminal** for an `ssh` shell in the current folder.
+- **Find Files** on the server with WinSCP's file masks, and **Compare Directories** to select what differs between the panes.
+- **Console and custom commands:** run shell commands in the current folder, or WinSCP-style custom commands (`tar -czvf "!?Archive name:?a.tgz!" !&`) on the selected files. On FTP, the console sends raw commands.
+- **Text mode:** convert line endings for text files, automatically by file type if you like.
 - **Directory synchronization:**
   - Compare and sync a local and a remote folder, in either or both directions, with a preview before anything changes.
-  - **Keep Remote Folder Up to Date** uploads local changes as you save them.
+  - Compare by time, size or checksum, or synchronize timestamps only.
+  - **Keep Folders Up to Date** uploads local changes as you save them, or checks the server and downloads its changes.
 
 ## Requirements
 
@@ -67,10 +75,12 @@ Homebrew requires `brew trust` once for any third-party tap.
 
 1. Open MacSCP. The Login window lists your saved sites.
 2. Enter a host name, then click **Login**. A host alias from `~/.ssh/config` works too. User name, port and key come from your SSH configuration unless you fill them in.
-   For FTP or Amazon S3, choose the file protocol first. For S3, enter the access key ID and secret access key; leave the host name empty for AWS, or enter your provider's endpoint.
+   For FTP, WebDAV or Amazon S3, choose the file protocol first. For S3, enter the access key ID and secret access key; leave the host name empty for AWS, or enter your provider's endpoint.
 3. Browse with the two panes. To transfer, select files and press ⌘K, or drag them to the other pane.
 
-To edit a server file, select it and press ⌘E. **Files › Edit With…** picks a different editor, and MacSCP remembers the choice for that file type.
+To edit a server file, select it and press ⌘E: it opens in MacSCP's editor. **Files › Edit With…** picks another app, and MacSCP remembers the choice for that file type; **Edit in MacSCP** (⌃⌘E) switches back.
+
+To bring your WinSCP sites over, export them in WinSCP (Tools › Export/Backup Configuration), then click **Import from WinSCP…** in the Login window.
 
 ## Keyboard shortcuts
 
@@ -83,7 +93,7 @@ To edit a server file, select it and press ⌘E. **Files › Edit With…** pick
 | Go to folder | ⇧⌘G |
 | Switch pane | Tab |
 | Copy to other pane | ⌘K |
-| Edit / Edit With… | ⌘E / ⌥⌘E |
+| Edit / Edit With… / Edit in MacSCP | ⌘E / ⌥⌘E / ⌃⌘E |
 | Rename | ⇧⌘R |
 | Delete | ⌘⌫ |
 | New folder | ⇧⌘N |
@@ -93,7 +103,11 @@ To edit a server file, select it and press ⌘E. **Files › Edit With…** pick
 | Refresh | ⌘R |
 | Show queue | ⌥⌘Q |
 | Synchronize | ⇧⌘S |
-| Keep remote folder up to date | ⇧⌘U |
+| Keep folders up to date | ⇧⌘U |
+| Compare directories | ⇧⌘C |
+| Find files | ⇧⌘F |
+| Console | ⌥⌘T |
+| Find in editor / Go to line | ⌘F / ⌘L |
 | Edited files | ⇧⌘E |
 | Open in Terminal | ⇧⌘T |
 
@@ -130,15 +144,14 @@ CI runs the integration suite against:
 
 | Path | Contents |
 | --- | --- |
-| `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP, FTP/FTPS and S3, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
+| `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP, FTP/FTPS, S3 and WebDAV, proxies, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
 | `App/Sources` | The macOS app: Commander window, panes, queue, dialogs. |
 | `Tests/RemoteCoreTests` | Unit and integration tests. |
 | `scripts` | Building libssh and libcurl, test servers, benchmarks, releases. |
 
 ## Roadmap
 
-- **Next:** protocol fixes: file times on FTP servers without MFMT, S3 content types, and renaming S3 objects over 5 GB.
-- **Then, in order:** importing WinSCP sites and PuTTY keys; Find files and Compare directories; an internal text editor; custom commands and a console; WebDAV; text-mode transfers, owner and group editing, and more synchronization options; translations.
+- **Next:** translations.
 - **1.0** follows after testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass.
 
 ## Relationship to WinSCP
