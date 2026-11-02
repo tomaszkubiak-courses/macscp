@@ -2,7 +2,7 @@
 
 # MacSCP
 
-A native macOS SFTP, SCP and FTP client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
+A native macOS SFTP, SCP, FTP and Amazon S3 client with a dual-pane Commander window, based on [WinSCP](https://winscp.net).
 
 [![CI](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml/badge.svg)](https://github.com/tomaszkubiak-courses/macscp/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/tomaszkubiak-courses/macscp)](https://github.com/tomaszkubiak-courses/macscp/releases/latest)
@@ -10,12 +10,15 @@ A native macOS SFTP, SCP and FTP client with a dual-pane Commander window, based
 
 MacSCP brings WinSCP's way of working to the Mac: local files on the left, the server on the right, a transfer queue below. It is written in Swift with AppKit and SwiftUI, on top of [libssh](https://www.libssh.org) and [libcurl](https://curl.se/libcurl/).
 
-> **Status: beta.** Version 0.3.0 adds FTP and FTPS. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
+> **Status: beta.** Version 0.4.0 adds Amazon S3 and S3-compatible storage, and a new app icon. Please [report problems](https://github.com/tomaszkubiak-courses/macscp/issues).
 
 ## Features
 
 - **SFTP and SCP**, including SCP to servers with a BusyBox or BSD userland.
 - **FTP and FTPS** with explicit or implicit TLS. Untrusted server certificates are shown before connecting and can be trusted once or saved.
+- **Amazon S3** and S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi and others):
+  - Buckets and folders, uploads of any size (large files go up in parts), rename and delete of whole folders.
+  - Access keys from the Login window, or from `~/.aws/credentials` and the usual `AWS_*` environment variables.
 - **Logins:**
   - Password, keyboard-interactive (one-time codes), private keys (with passphrase), ssh-agent and Kerberos (GSSAPI).
   - Saved passwords are kept in the macOS Keychain.
@@ -64,6 +67,7 @@ Homebrew requires `brew trust` once for any third-party tap.
 
 1. Open MacSCP. The Login window lists your saved sites.
 2. Enter a host name, then click **Login**. A host alias from `~/.ssh/config` works too. User name, port and key come from your SSH configuration unless you fill them in.
+   For FTP or Amazon S3, choose the file protocol first. For S3, enter the access key ID and secret access key; leave the host name empty for AWS, or enter your provider's endpoint.
 3. Browse with the two panes. To transfer, select files and press ⌘K, or drag them to the other pane.
 
 To edit a server file, select it and press ⌘E. **Files › Edit With…** picks a different editor, and MacSCP remembers the choice for that file type.
@@ -109,7 +113,7 @@ open MacSCP.xcodeproj          # or: xcodebuild -project MacSCP.xcodeproj -schem
 
 ### Tests
 
-Unit tests run with `swift test`. Integration tests need SSH and FTP servers; the repository starts throwaway ones on localhost:
+Unit tests run with `swift test`. Integration tests need SSH, FTP and S3 servers; the repository starts throwaway ones on localhost:
 
 ```sh
 brew install dropbear versitygw
@@ -126,14 +130,14 @@ CI runs the integration suite against:
 
 | Path | Contents |
 | --- | --- |
-| `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP and FTP/FTPS, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
+| `Sources/RemoteCore` | Engine: SSH connection, SFTP, SCP, FTP/FTPS and S3, transfers, queue, synchronization, remote editing, sites. Foundation only; also builds on Linux. |
 | `App/Sources` | The macOS app: Commander window, panes, queue, dialogs. |
 | `Tests/RemoteCoreTests` | Unit and integration tests. |
 | `scripts` | Building libssh and libcurl, test servers, benchmarks, releases. |
 
 ## Roadmap
 
-- **Next:** Amazon S3.
+- **Next:** toward 1.0: testing with more FTP servers and S3 providers, and a full VoiceOver pass.
 - **Later:** WebDAV, an internal text editor, importing WinSCP sites and PuTTY keys, and translations.
 
 ## Relationship to WinSCP
@@ -146,5 +150,6 @@ MacSCP is licensed under the [GNU General Public License v3.0](LICENSE).
 
 It includes:
 - [libssh](https://www.libssh.org), LGPL-2.1
+- [libcurl](https://curl.se/libcurl/), curl license (MIT-style)
 - [OpenSSL](https://www.openssl.org), Apache-2.0
 - [Sparkle](https://sparkle-project.org), MIT
