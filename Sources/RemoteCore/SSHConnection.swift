@@ -368,7 +368,9 @@ final class SSHConnection {
         guard ssh_channel_request_exec(ch, command) == SSH_OK else {
             let msg = lastError
             ssh_channel_free(ch)
-            throw RemoteError(.connection, "Cannot run \(command): \(msg)")
+            let refused = ssh_is_connected(session) != 0
+            throw RemoteError(refused ? .unsupported : .connection,
+                              refused ? "The server does not allow running commands." : "Cannot run \(command): \(msg)")
         }
         return ch
     }

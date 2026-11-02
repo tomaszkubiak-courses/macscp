@@ -52,6 +52,7 @@ extension IntegrationTests {
     func testChangeOwnerAndGroup() async throws {
         let local = try randomFile("own.txt", size: 10)
         try await eachTarget(protocols: [.sftp, .scp]) { label, fs, base in
+            guard target(label).0.hasShell else { return }
             let path = RemotePath.join(base, "own.txt")
             try await fs.upload(local, to: path, offset: 0, progress: { _ in })
             guard let before = try await fs.fileInfo(path) else { return XCTFail(label) }

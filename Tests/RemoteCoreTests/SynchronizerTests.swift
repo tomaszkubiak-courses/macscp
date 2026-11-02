@@ -84,6 +84,7 @@ extension IntegrationTests {
         let old = Date(timeIntervalSince1970: 1_700_000_000)
         let new = Date(timeIntervalSince1970: 1_700_003_600)
         try await eachTarget(protocols: [.sftp, .scp]) { label, fs, base in
+            guard target(label).0.hasShell else { return }
             let local = scratch.appendingPathComponent("sum-\(UUID().uuidString.prefix(6))")
             try FileManager.default.createDirectory(at: local, withIntermediateDirectories: true)
             func put(_ name: String, local text: String, _ lt: Date, remote rtext: String, _ rt: Date) async throws {

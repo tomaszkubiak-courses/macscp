@@ -169,7 +169,8 @@ public actor SFTPFileSystem: RemoteFileSystem {
     public nonisolated var supportsOwnership: Bool { true }
 
     public func checksums(_ paths: [String]) throws -> [String: String]? {
-        let r = try ssh.runShell(checksumCommand(paths), in: "/")
+        let r: CommandResult
+        do { r = try ssh.runShell(checksumCommand(paths), in: "/") } catch let e as RemoteError where e.kind == .unsupported { return nil }
         let sums = parseChecksums(r.output, paths)
         return sums.isEmpty ? nil : sums
     }
