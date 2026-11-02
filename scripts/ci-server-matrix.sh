@@ -62,6 +62,8 @@ LoadModule mod_tls.c
   TLSRequired off
   TLSRSACertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
   TLSRSACertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+  TLSLog /dev/stderr
+  AllowStoreRestart on
   PassivePorts 30000 30009
   RequireValidShell off
   AllowOverwrite on
@@ -73,6 +75,8 @@ LoadModule mod_tls.c
   TLSOptions UseImplicitSSL
   TLSRSACertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem
   TLSRSACertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key
+  TLSLog /dev/stderr
+  AllowStoreRestart on
   PassivePorts 30010 30019
   RequireValidShell off
   AllowOverwrite on

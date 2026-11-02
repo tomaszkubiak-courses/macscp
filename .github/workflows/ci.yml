@@ -92,5 +92,5 @@ jobs:
               scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
       - name: Server logs
         if: failure()
-        run: for c in busybox openssh74 proftpd; do echo "== $c"; docker logs --tail 40 $c; done
+        run: for c in busybox openssh74 proftpd; do echo "== $c"; docker logs --tail 150 $c; done
 
