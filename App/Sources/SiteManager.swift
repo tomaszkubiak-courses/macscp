@@ -73,6 +73,7 @@ final class SiteManagerModel {
     var isSaved: Bool { sites.contains { $0.id == draft.id } }
 
     func save() {
+        fillDefaultHost()
         if draft.name.trimmingCharacters(in: .whitespaces).isEmpty {
             draft.name = draft.user.isEmpty ? draft.host : "\(draft.user)@\(draft.host)"
         }
@@ -93,7 +94,12 @@ final class SiteManagerModel {
         select(Node.newSiteID)
     }
 
+    private func fillDefaultHost() {
+        if draft.host.isEmpty && draft.fileProtocol.isS3 { draft.host = "s3.amazonaws.com" }
+    }
+
     func login() {
+        fillDefaultHost()
         guard !draft.host.isEmpty else { error = String(localized: "Enter a host name."); return }
         connecting = true
         error = nil
@@ -219,7 +225,7 @@ struct SiteManagerView: View {
                     if model.connecting { ProgressView().controlSize(.small) }
                     Button("Login") { model.login() }
                         .keyboardShortcut(.defaultAction)
-                        .disabled(model.connecting || model.draft.host.isEmpty)
+                        .disabled(model.connecting || (model.draft.host.isEmpty && !model.draft.fileProtocol.isS3))
                 }
                 .padding([.horizontal, .bottom])
             }
