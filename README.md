@@ -117,14 +117,14 @@ Unit tests run with `swift test`. Integration tests need SSH, FTP and S3 servers
 
 ```sh
 brew install dropbear versitygw
-scripts/test-servers.sh start  # OpenSSH :2222, Dropbear :2223, FTP/FTPS (pyftpdlib) :2121, S3 (versitygw) :9000 and :9001
+scripts/test-servers.sh start  # OpenSSH :2222, Dropbear :2223, FTP/FTPS :2121, S3 :9000/:9001, WebDAV :8080/:8443
 MACSCP_INTEGRATION=1 swift test
 scripts/test-servers.sh stop
 ```
 
 CI runs the integration suite against:
-- OpenSSH, Dropbear, pyftpdlib (FTP and FTPS) and versitygw (S3 over HTTP and HTTPS) on macOS and Linux, including password logins.
-- OpenSSH 7.4, a BusyBox userland, and ProFTPD over SFTP, FTP, and explicit and implicit FTPS.
+- OpenSSH, Dropbear, pyftpdlib (FTP and FTPS), versitygw (S3) and WsgiDAV (WebDAV), over HTTP and HTTPS where it applies, on macOS and Linux, including password logins.
+- OpenSSH 7.4, a BusyBox userland, ProFTPD over SFTP, FTP, and explicit and implicit FTPS, vsftpd, and Apache WebDAV.
 
 ### Project layout
 

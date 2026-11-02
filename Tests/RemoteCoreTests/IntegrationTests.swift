@@ -37,7 +37,14 @@ final class IntegrationTests: XCTestCase {
         return Server(name: String(p[0]), port: Int(p[1])!, protocols: [FileProtocol(rawValue: String(p[2]))!],
                       password: env["MACSCP_TEST_S3_SECRET"] ?? "macscp-s3", home: "/macscp")
     }
-    var allServers: [Server] { servers + ftpServers + s3Servers }
+    let davServers: [Server] = (env["MACSCP_TEST_DAV_SERVERS"] ?? "wsgidav:8080:webdavhttp,wsgidav-tls:8443:webdav").split(separator: ",").map {
+        let p = $0.split(separator: ":")
+        return Server(name: String(p[0]), port: Int(p[1])!, protocols: [FileProtocol(rawValue: String(p[2]))!],
+                      password: env["MACSCP_TEST_DAV_PASSWORD"] ?? "macscp-dav")
+    }
+    var allServers: [Server] { servers + ftpServers + s3Servers + davServers }
+
+    func hasAttributes(_ label: String) -> Bool { let p = target(label).1; return !p.isS3 && !p.isWebDAV }
     var scratch: URL!
 
     override func setUpWithError() throws {
@@ -146,7 +153,7 @@ final class IntegrationTests: XCTestCase {
             let missing = try await fs.fileInfo(remote)
             XCTAssertNil(missing, label)
 
-            if !target(label).1.isS3 {
+            if hasAttributes(label) {
                 try await fs.setPermissions(renamed, Permissions(0o600))
                 let info = try await fs.fileInfo(renamed)
                 XCTAssertEqual(info?.permissions.mode, 0o600, label)
@@ -159,7 +166,7 @@ final class IntegrationTests: XCTestCase {
 
             let sub = RemotePath.join(base, "sub dir")
             try await fs.makeDirectory(sub)
-            if !target(label).1.isFTP && !target(label).1.isS3 {
+            if target(label).1.isSSH {
                 try await fs.createSymlink(RemotePath.join(base, "file-link"), target: renamed)
                 try await fs.createSymlink(RemotePath.join(base, "dir-link"), target: sub)
                 try await fs.createSymlink(RemotePath.join(base, "broken-link"), target: RemotePath.join(base, "nope"))

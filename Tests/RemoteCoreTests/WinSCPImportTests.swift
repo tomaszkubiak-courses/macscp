@@ -45,8 +45,9 @@ final class WinSCPImportTests: XCTestCase {
         IsWorkspace=1
         """
         let r = WinSCPImport.parse(Data(ini.utf8))
-        XCTAssertEqual(r.sites.map(\.site.name), ["Prod web", "legacy ftp", "bucket"])
-        XCTAssertEqual(r.skipped, ["dav"])
+        XCTAssertEqual(r.sites.map(\.site.name), ["Prod web", "legacy ftp", "bucket", "dav"])
+        XCTAssertEqual(r.sites[3].site.fileProtocol, .webdavhttp)
+        XCTAssertEqual(r.skipped, [])
         let prod = r.sites[0]
         XCTAssertEqual(prod.site.folder, "Work")
         XCTAssertEqual(prod.site.fileProtocol, .sftp)

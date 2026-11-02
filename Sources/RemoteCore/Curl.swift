@@ -40,6 +40,8 @@ enum Curl {
         cssh_curl_pointer(c, CURLOPT_WRITEDATA, me)
         cssh_curl_read(c, onRead)
         cssh_curl_pointer(c, CURLOPT_READDATA, me)
+        cssh_curl_seek(c, onSeek)
+        cssh_curl_pointer(c, CURLOPT_SEEKDATA, me)
         cssh_curl_xferinfo(c, onProgress)
         cssh_curl_pointer(c, CURLOPT_XFERINFODATA, me)
         cssh_curl_long(c, CURLOPT_NOPROGRESS, 0)
@@ -110,6 +112,7 @@ final class Exchange {
     var sink: ((UnsafeRawBufferPointer) -> Bool)?
     var source: ((UnsafeMutableRawBufferPointer) -> Int?)?
     var progress: ((Int64) -> Void)?
+    var seek: ((Int64) -> Bool)?
     var localError: RemoteError?
     var cancelled = false
     let errorBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(CURL_ERROR_SIZE))
@@ -153,6 +156,11 @@ private let onRead: curl_read_callback = { ptr, size, count, arg in
         return Int(CURL_READFUNC_ABORT)
     }
     return n
+}
+
+private let onSeek: curl_seek_callback = { arg, offset, origin in
+    guard origin == SEEK_SET, let seek = Exchange.from(arg).seek else { return 2 }
+    return seek(Int64(offset)) ? 0 : 1
 }
 
 private let onProgress: curl_xferinfo_callback = { arg, _, downloaded, _, uploaded in

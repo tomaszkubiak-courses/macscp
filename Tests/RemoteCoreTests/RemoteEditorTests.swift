@@ -30,7 +30,7 @@ extension IntegrationTests {
             let remote = RemotePath.join(base, "notes.txt")
             try await fs.upload(seed, to: remote, offset: 0, progress: { _ in })
             let (s, proto) = target(label)
-            if !proto.isS3 { try await fs.setPermissions(remote, Permissions(0o640)) }
+            if hasAttributes(label) { try await fs.setPermissions(remote, Permissions(0o640)) }
             let params = parameters(s)
             let answers = Answers()
             let editor = RemoteEditor(cacheRoot: scratch.appendingPathComponent("edit-\(UUID().uuidString)"),
@@ -57,12 +57,12 @@ extension IntegrationTests {
             try await waitFor("\(label) vim upload") { try await remoteContent(fs, remote) == "vim\n" }
 
             let info = try await fs.fileInfo(remote)
-            if !proto.isS3 { XCTAssertEqual(info?.permissions.mode, 0o640, label) }
+            if hasAttributes(label) { XCTAssertEqual(info?.permissions.mode, 0o640, label) }
             try await waitFor("\(label) settled") { await !editor.hasPendingUploads }
 
             let other = scratch.appendingPathComponent("other.txt")
             try "theirs\n".write(to: other, atomically: true, encoding: .utf8)
-            if proto.isS3 { try await Task.sleep(for: .milliseconds(1100)) }
+            if !hasAttributes(label) { try await Task.sleep(for: .milliseconds(1100)) }
             try await fs.upload(other, to: remote, offset: 0, progress: { _ in })
             try await fs.setModified(remote, Date().addingTimeInterval(-7200))
             answers.overwrite = false

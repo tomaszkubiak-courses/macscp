@@ -39,6 +39,9 @@ versitygw --access macscp --secret macscp-s3 --port 127.0.0.1:9000 posix /tmp/s3
 versitygw --access macscp --secret macscp-s3 --port 127.0.0.1:9001 --cert /tmp/ftp-cert/cert.pem --key /tmp/ftp-cert/key.pem \
   posix /tmp/s3-root >/tmp/s3-tls.log 2>&1 &
 
-for p in 2222 2223 2121 9000 9001; do
+python3 -m pip install -q --break-system-packages wsgidav cheroot
+"$(dirname "$0")/webdav-server.sh" "$(command -v wsgidav)" /tmp/webdav macscp macscp-dav /tmp/ftp-cert/cert.pem /tmp/ftp-cert/key.pem 8080 8443
+
+for p in 2222 2223 2121 9000 9001 8080 8443; do
   for _ in $(seq 50); do nc -z 127.0.0.1 $p && break; sleep 0.1; done
 done

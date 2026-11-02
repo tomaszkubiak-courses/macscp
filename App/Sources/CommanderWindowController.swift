@@ -40,7 +40,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         buildLayout()
         let site = session.site
         window.title = site.name.isEmpty ? site.host : site.name
-        let proto = site.fileProtocol.isS3 ? "S3" : site.fileProtocol.isFTP ? (site.fileProtocol == .ftp ? "FTP" : "FTPS")
+        let proto = site.fileProtocol.isWebDAV ? "WebDAV" : site.fileProtocol.isS3 ? "S3" : site.fileProtocol.isFTP ? (site.fileProtocol == .ftp ? "FTP" : "FTPS")
             : site.fileProtocol.rawValue.uppercased()
         window.subtitle = "\(proto) · \(site.user.isEmpty ? "" : site.user + "@")\(site.host)"
         window.setFrameAutosaveName("Commander")
@@ -136,8 +136,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         switch item.action {
         case #selector(toggleHiddenFiles(_:)): item.state = UserDefaults.standard.bool(forKey: Preferences.showHidden) ? .on : .off
         case #selector(toggleQueue(_:)): item.state = outerSplit.splitViewItems[1].isCollapsed ? .off : .on
-        case #selector(openInTerminal(_:)): return !session.site.fileProtocol.isS3
-        case #selector(openConsole(_:)): return !session.site.fileProtocol.isS3
+        case #selector(openInTerminal(_:)): return session.site.fileProtocol.isSSH || session.site.fileProtocol.isFTP
+        case #selector(openConsole(_:)): return session.site.fileProtocol.isSSH || session.site.fileProtocol.isFTP
         case #selector(runCustomCommand(_:)):
             let proto = session.site.fileProtocol
             guard proto == .sftp || proto == .scp, let id = item.representedObject as? String,
@@ -150,7 +150,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
 
     @objc func openInTerminal(_ sender: Any?) {
         let s = session.site
-        guard !s.fileProtocol.isS3 else { return NSSound.beep() }
+        guard s.fileProtocol.isSSH || s.fileProtocol.isFTP else { return NSSound.beep() }
         var args = ["ssh"]
         if let port = s.port, !s.fileProtocol.isFTP { args += ["-p", String(port)] }
         if let key = s.privateKeyPath, !key.isEmpty, !key.lowercased().hasSuffix(".ppk") { args += ["-i", key] }

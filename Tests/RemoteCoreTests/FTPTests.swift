@@ -23,8 +23,8 @@ final class MLSDTests: XCTestCase {
 
 extension IntegrationTests {
     func testTLSCertificateTrust() async throws {
-        for s in ftpServers + s3Servers {
-            for proto in s.protocols where proto != .ftp && proto != .s3http {
+        for s in ftpServers + s3Servers + davServers {
+            for proto in s.protocols where proto != .ftp && proto != .s3http && proto != .webdavhttp {
                 let p = parameters(s)
                 try? FileManager.default.removeItem(atPath: p.trustedCertificatesPath!)
 

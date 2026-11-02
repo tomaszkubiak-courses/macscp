@@ -9,6 +9,9 @@ FTP_DIR=$ROOT/build/ftpd
 S3_PORT=${S3_PORT:-9000}
 S3_TLS_PORT=${S3_TLS_PORT:-9001}
 S3_DIR=$ROOT/build/s3
+DAV_DIR=$ROOT/build/webdav
+DAV_PORT=${DAV_PORT:-8080}
+DAV_TLS_PORT=${DAV_TLS_PORT:-8443}
 
 wait_port() {
   for _ in $(seq 50); do nc -z 127.0.0.1 "$1" 2>/dev/null && return 0; sleep 0.1; done
@@ -16,7 +19,7 @@ wait_port() {
 }
 
 stop() {
-  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid; do
+  for p in "$DIR"/sshd.pid "$DIR"/dropbear.pid "$FTP_DIR"/ftpd.pid "$S3_DIR"/s3.pid "$S3_DIR"/s3-tls.pid "$DAV_DIR"/dav.pid "$DAV_DIR"/dav-tls.pid; do
     [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true
     rm -f "$p"
   done
@@ -70,6 +73,13 @@ CONF
       echo $! > "$S3_DIR/${spec#*:}.pid"
       wait_port "${spec%%:*}"
     done
-  fi ;;
+  fi
+
+  mkdir -p "$DAV_DIR/root"
+  [ -x "$DAV_DIR/venv/bin/wsgidav" ] || { python3 -m venv "$DAV_DIR/venv" && "$DAV_DIR/venv/bin/pip" install -q wsgidav cheroot; }
+  "$ROOT/scripts/webdav-server.sh" "$DAV_DIR/venv/bin/wsgidav" "$DAV_DIR" "$(id -un)" macscp-dav "$FTP_DIR/cert.pem" "$FTP_DIR/key.pem" \
+    "$DAV_PORT" "$DAV_TLS_PORT"
+  wait_port "$DAV_PORT"
+  wait_port "$DAV_TLS_PORT" ;;
 stop) stop ;;
 esac

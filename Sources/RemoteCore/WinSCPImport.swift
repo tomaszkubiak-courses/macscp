@@ -34,6 +34,7 @@ public enum WinSCPImport {
             case 0: proto = .scp
             case 1, 2: proto = .sftp
             case 5: proto = ftps == 0 ? .ftp : ftps == 1 ? .ftpsImplicit : .ftps
+            case 6: proto = ftps == 0 ? .webdavhttp : .webdav
             case 7: proto = ftps == 1 ? .s3 : .s3http
             default:
                 result.skipped.append(path)
@@ -45,8 +46,8 @@ public enum WinSCPImport {
             case .sftp, .scp: 22
             case .ftp, .ftps: 21
             case .ftpsImplicit: 990
-            case .s3: 443
-            case .s3http: 80
+            case .s3, .webdav: 443
+            case .s3http, .webdavhttp: 80
             }
             if let port = Int(values["PortNumber"] ?? ""), port != defaultPort { site.port = port }
             if let dir = values["RemoteDirectory"].map(unmunge), !dir.isEmpty { site.remoteDirectory = dir }

@@ -58,7 +58,7 @@ jobs:
           apt-get update -q
           DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
             cmake ninja-build pkg-config libssl-dev zlib1g-dev curl xz-utils ca-certificates openssl \
-            openssh-server openssh-client dropbear-bin netcat-openbsd gdb python3-pyftpdlib python3-openssl
+            openssh-server openssh-client dropbear-bin netcat-openbsd gdb python3-pyftpdlib python3-openssl python3-pip
       - name: Build libssh
         run: scripts/build-cssh.sh
       - name: Start servers
@@ -68,7 +68,7 @@ jobs:
         run: scripts/ci-run-tests.sh
       - name: Server logs
         if: failure()
-        run: for f in /tmp/dropbear.log /tmp/sshd.log /tmp/ftpd.log /tmp/s3.log /tmp/s3-tls.log; do echo "== $f"; tail -n 80 "$f"; done
+        run: for f in /tmp/dropbear.log /tmp/sshd.log /tmp/ftpd.log /tmp/s3.log /tmp/s3-tls.log /tmp/webdav/dav.log /tmp/webdav/dav-tls.log; do echo "== $f"; tail -n 80 "$f"; done
 
   servers:
     runs-on: ubuntu-24.04
@@ -78,13 +78,13 @@ jobs:
         env:
           MACSCP_TEST_PASSWORD: Test-pass-1
         run: scripts/ci-server-matrix.sh
-      - name: Integration tests (BusyBox, OpenSSH 7.4, ProFTPD SFTP, FTP and FTPS, vsftpd)
+      - name: Integration tests (BusyBox, OpenSSH 7.4, ProFTPD SFTP, FTP and FTPS, vsftpd, Apache WebDAV)
         timeout-minutes: 25
         run: |
           docker run --rm --network host --cap-add=SYS_PTRACE -v "$PWD:/src" -v /tmp/keys:/keys -w /src \
             -e MACSCP_INTEGRATION=1 -e MACSCP_TEST_USER=macscp -e MACSCP_TEST_PASSWORD=Test-pass-1 -e MACSCP_TEST_KEYS=/keys \
             -e MACSCP_TEST_SERVERS=busybox:2224,openssh74:2225,proftpd:2226:sftp:noshell \
-            -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit,vsftpd:2129:ftp+ftps:coarse -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 -e MACSCP_TEST_S3_SERVERS= \
+            -e MACSCP_TEST_FTP_SERVERS=proftpd-ftp:2127:ftp+ftps,proftpd-implicit:2128:ftpsImplicit,vsftpd:2129:ftp+ftps:coarse -e MACSCP_TEST_FTP_PASSWORD=Test-pass-1 -e MACSCP_TEST_S3_SERVERS= -e MACSCP_TEST_DAV_SERVERS=apache:2130:webdavhttp -e MACSCP_TEST_DAV_PASSWORD=Test-pass-1 \
             swift:6.2-noble bash -c '
               apt-get update -q >/dev/null &&
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build pkg-config libssl-dev \
@@ -92,5 +92,5 @@ jobs:
               scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
       - name: Server logs
         if: failure()
-        run: for c in busybox openssh74 proftpd vsftpd; do echo "== $c"; docker logs --tail 150 $c; done; docker exec vsftpd tail -n 80 /var/log/vsftpd.log || true; docker ps -a
+        run: for c in busybox openssh74 proftpd vsftpd apache; do echo "== $c"; docker logs --tail 150 $c; done; docker exec vsftpd tail -n 80 /var/log/vsftpd.log || true; docker ps -a
 

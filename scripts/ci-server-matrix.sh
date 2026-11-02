@@ -116,7 +116,25 @@ vsftpd_log_file=/var/log/vsftpd.log
 CONF
   exec vsftpd /etc/vsftpd.conf"
 
-for p in 2224 2225 2226 2127 2128 2129; do
+docker run -d --init --name apache -p 2130:80 debian:bookworm sh -c "
+  apt-get update -q >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends apache2 apache2-utils >/dev/null
+  a2enmod -q dav dav_fs auth_basic
+  rm -f /var/www/html/index.html && chown www-data /var/www/html
+  htpasswd -bc /etc/apache2/dav.passwd macscp '$PASSWORD'
+  cat > /etc/apache2/conf-enabled/dav.conf <<CONF
+DavLockDB /var/lock/apache2/DavLock
+<Location />
+  Dav On
+  AuthType Basic
+  AuthName dav
+  AuthUserFile /etc/apache2/dav.passwd
+  Require valid-user
+</Location>
+CONF
+  exec apachectl -D FOREGROUND"
+
+for p in 2224 2225 2226 2127 2128 2129 2130; do
   for _ in $(seq 120); do (echo > /dev/tcp/127.0.0.1/$p) 2>/dev/null && break; sleep 1; done
 done
 for _ in $(seq 120); do exec 3<>/dev/tcp/127.0.0.1/2129 && timeout 2 head -c 3 <&3 | grep -q 220 && break; sleep 1; done
