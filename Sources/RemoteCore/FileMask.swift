@@ -45,15 +45,22 @@ public struct FileMask: Sendable, Equatable {
 
     public var isEmpty: Bool { fileInclude.isEmpty && fileExclude.isEmpty && dirInclude.isEmpty && dirExclude.isEmpty }
 
-    public func matches(path: String, isDirectory: Bool, size: Int64? = nil, modified: Date? = nil) -> Bool {
+    public var selectsDirectories: Bool { !dirInclude.isEmpty }
+    public var selectsFiles: Bool { !fileInclude.isEmpty || dirInclude.isEmpty }
+
+    public func excludesDirectory(_ path: String) -> Bool {
+        let (name, dir) = Self.split(path)
+        return Self.matches(name, true, dir, nil, dirExclude, recurse: false)
+    }
+
+    private static func split(_ path: String) -> (name: String, dir: String) {
         let trimmed = RemotePath.trimTrailingSlash(path)
-        let name = RemotePath.name(trimmed)
-        let dir: String
-        if let i = trimmed.lastIndex(of: "/") {
-            dir = i == trimmed.startIndex ? "/" : String(trimmed[..<i])
-        } else {
-            dir = ""
-        }
+        guard let i = trimmed.lastIndex(of: "/") else { return (trimmed, "") }
+        return (RemotePath.name(trimmed), i == trimmed.startIndex ? "/" : String(trimmed[..<i]))
+    }
+
+    public func matches(path: String, isDirectory: Bool, size: Int64? = nil, modified: Date? = nil) -> Bool {
+        let (name, dir) = Self.split(path)
         let includes = isDirectory ? dirInclude : fileInclude
         let excludes = isDirectory ? dirExclude : fileExclude
         let params = size.map { ($0, modified ?? .distantPast) }

@@ -213,6 +213,37 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     private var syncModel: SyncModel?
     private var keepUpToDate: KeepUpToDateWindowController?
 
+    private var findFiles: FindFilesWindowController?
+
+    @objc func findFiles(_ sender: Any?) {
+        if findFiles == nil {
+            let model = FindFilesModel(session: session, directory: remote.path)
+            model.reveal = { [weak self] found in
+                self?.remote.navigate(to: RemotePath.parent(found.path), select: found.file.name)
+                self?.window?.makeKeyAndOrderFront(nil)
+            }
+            findFiles = FindFilesWindowController(model: model, title: window?.title ?? "")
+        } else if findFiles?.model.running == false {
+            findFiles?.model.directory = remote.path
+        }
+        findFiles?.showWindow(nil)
+    }
+
+    @objc func compareDirectories(_ sender: Any?) {
+        func entries(_ pane: FilePaneViewController) -> [ComparedEntry] {
+            pane.visible.map { ComparedEntry(name: $0.name, isDirectory: $0.isDirectory, size: $0.size, modified: $0.modified) }
+        }
+        let d = DirectoryComparison.differences(local: entries(local), remote: entries(remote))
+        local.applyFilterAndSort(selecting: d.local)
+        remote.applyFilterAndSort(selecting: d.remote)
+        if d.local.isEmpty && d.remote.isEmpty {
+            let a = NSAlert()
+            a.messageText = String(localized: "The folders have the same files.")
+            a.informativeText = String(localized: "Names, sizes and modification times match.")
+            Task { _ = await Alerts.serialized { [window] in await Alerts.run(a, in: window) } }
+        }
+    }
+
     @objc func keepRemoteUpToDate(_ sender: Any?) {
         if keepUpToDate == nil {
             let model = KeepUpToDateModel(session: session, localDir: local.path, remoteDir: remote.path)
@@ -241,6 +272,10 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     #if DEBUG
     func debugCompare() { syncModel?.compare() }
     func debugStartKeep() { keepUpToDate?.model.start() }
+    func debugFind(_ mask: String) {
+        findFiles?.model.mask = mask
+        findFiles?.model.start()
+    }
     #endif
 
     @objc func showEditedFiles(_ sender: Any?) {
@@ -290,6 +325,8 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     func closeSessionNow() {
         keepUpToDate?.close()
         keepUpToDate = nil
+        findFiles?.close()
+        findFiles = nil
         let s = session
         let e = edits!
         Task {
@@ -327,6 +364,8 @@ extension CommanderWindowController: NSToolbarDelegate {
     nonisolated(unsafe) private static let items: [(String, String, String, Selector)] = [
         ("transfer", "Copy", "doc.on.doc", #selector(FilePaneViewController.transferSelection(_:))),
         ("sync", "Synchronize", "arrow.triangle.2.circlepath", #selector(CommanderWindowController.synchronize(_:))),
+        ("compare", "Compare Directories", "arrow.left.arrow.right", #selector(CommanderWindowController.compareDirectories(_:))),
+        ("find", "Find Files", "magnifyingglass", #selector(CommanderWindowController.findFiles(_:))),
         ("edit", "Edit", "pencil", #selector(FilePaneViewController.editSelection(_:))),
         ("newFolder", "New Folder", "folder.badge.plus", #selector(FilePaneViewController.newFolder(_:))),
         ("delete", "Delete", "trash", #selector(FilePaneViewController.deleteSelection(_:))),
@@ -348,7 +387,7 @@ extension CommanderWindowController: NSToolbarDelegate {
     }
 
     nonisolated func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        ["transfer", "sync", "edit", "newFolder", "delete", "info", NSToolbarItem.Identifier.flexibleSpace.rawValue,
+        ["transfer", "sync", "compare", "find", "edit", "newFolder", "delete", "info", NSToolbarItem.Identifier.flexibleSpace.rawValue,
          "hidden", "refresh", "queue", "edited", "terminal"].map { NSToolbarItem.Identifier($0) }
     }
 

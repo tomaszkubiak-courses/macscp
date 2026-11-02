@@ -25,6 +25,8 @@ enum MainMenu {
             item(String(localized: "Edited Files…"), #selector(CommanderWindowController.showEditedFiles(_:)), "e", [.command, .shift]),
             item(String(localized: "Synchronize…"), #selector(CommanderWindowController.synchronize(_:)), "s", [.command, .shift]),
             item(String(localized: "Keep Remote Folder Up to Date…"), #selector(CommanderWindowController.keepRemoteUpToDate(_:)), "u", [.command, .shift]),
+            item(String(localized: "Compare Directories"), #selector(CommanderWindowController.compareDirectories(_:)), "c", [.command, .shift]),
+            item(String(localized: "Find Files…"), #selector(CommanderWindowController.findFiles(_:)), "f"),
             .separator(),
             item(String(localized: "Close"), #selector(NSWindow.performClose(_:)), "w"),
         ]))

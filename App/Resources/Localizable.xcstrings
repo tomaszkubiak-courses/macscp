@@ -69,6 +69,9 @@
     "%lld transfers in progress" : {
 
     },
+    "*.log; *.txt | .git/; >1M" : {
+
+    },
     "*.txt; *.log | *.bak; .git/" : {
 
     },
@@ -162,6 +165,9 @@
     "Compare" : {
 
     },
+    "Compare Directories" : {
+
+    },
     "Compare by size" : {
 
     },
@@ -223,6 +229,9 @@
 
     },
     "Direction" : {
+
+    },
+    "Directory" : {
 
     },
     "Done" : {
@@ -294,6 +303,15 @@
     "Files over 100 KB" : {
 
     },
+    "Find" : {
+
+    },
+    "Find Files — %@" : {
+
+    },
+    "Find Files…" : {
+
+    },
     "Folder" : {
 
     },
@@ -301,6 +319,9 @@
 
     },
     "Forward" : {
+
+    },
+    "Found %lld items." : {
 
     },
     "From ~/.aws/credentials" : {
@@ -403,6 +424,9 @@
 
     },
     "Name" : {
+
+    },
+    "Names, sizes and modification times match." : {
 
     },
     "Never" : {
@@ -599,6 +623,12 @@
     "Save password in Keychain" : {
 
     },
+    "Search in" : {
+
+    },
+    "Searching %@…" : {
+
+    },
     "Secret access key" : {
 
     },
@@ -641,6 +671,9 @@
     "Show hidden files" : {
 
     },
+    "Show in Remote Pane" : {
+
+    },
     "Site name" : {
 
     },
@@ -672,6 +705,9 @@
 
     },
     "Stopped" : {
+
+    },
+    "Stopped. Found %lld items." : {
 
     },
     "Stopping deletes the local copy and its changes." : {
@@ -731,6 +767,9 @@
 
     },
     "The folders are already in sync." : {
+
+    },
+    "The folders have the same files." : {
 
     },
     "The server %@:%@ is not in your known hosts. Its %@ key fingerprint is:\n\n%@\n\nOnly continue if you trust this server." : {

@@ -62,6 +62,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     commanders.last?.keepRemoteUpToDate(nil)
                     commanders.last?.debugStartKeep()
                 }
+                if d.bool(forKey: "MacSCPDebugCompare") {
+                    try? await Task.sleep(for: .seconds(2))
+                    commanders.last?.compareDirectories(nil)
+                }
+                if let mask = d.string(forKey: "MacSCPDebugFind") {
+                    try? await Task.sleep(for: .seconds(2))
+                    commanders.last?.findFiles(nil)
+                    commanders.last?.debugFind(mask)
+                }
                 if d.bool(forKey: "MacSCPDebugSync") {
                     try? await Task.sleep(for: .seconds(1))
                     commanders.last?.synchronize(nil)
