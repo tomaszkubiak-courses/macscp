@@ -50,6 +50,11 @@ if [ "$ADHOC" != --adhoc ]; then
   mkdir -p build/updates && cp "$DMG" build/updates/
   KEYARG=(); [ -n "${SPARKLE_KEY_FILE:-}" ] && KEYARG=(--ed-key-file "$SPARKLE_KEY_FILE")
   "$GEN" ${KEYARG[@]+"${KEYARG[@]}"} --download-url-prefix "https://github.com/tomaszkubiak-courses/macscp/releases/download/v$VERSION/" build/updates
-  echo "Upload build/updates/appcast.xml and $DMG; update Casks/macscp.rb sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
+  for old in build/updates/MacSCP-*.dmg; do
+    v=$(basename "$old" .dmg); v=${v#MacSCP-}
+    [ "$v" = "$VERSION" ] || sed -i '' "s|download/v$VERSION/MacSCP-$v.dmg|download/v$v/MacSCP-$v.dmg|" build/updates/appcast.xml
+  done
+  echo "Upload build/updates/appcast.xml, $DMG and build/updates/*.delta referenced in the appcast;" \
+    "update Casks/macscp.rb sha256: $(shasum -a 256 "$DMG" | cut -d' ' -f1)"
 fi
 echo "$DMG"
