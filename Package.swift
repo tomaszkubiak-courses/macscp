@@ -3,7 +3,7 @@ import PackageDescription
 
 #if os(Linux)
 
-let cssh = Target.systemLibrary(name: "CSSH", path: "Sources/CSSHLinux")
+let cssh = Target.systemLibrary(name: "CSSH", path: "Sources/CSSHLinux", pkgConfig: "cssh")
 #else
 
 let cssh = Target.binaryTarget(name: "CSSH", path: "Frameworks/CSSH.xcframework")

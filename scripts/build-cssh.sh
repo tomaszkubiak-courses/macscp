@@ -39,16 +39,25 @@ fetch "https://www.libssh.org/files/${LIBSSH_VERSION%.*}/libssh-$LIBSSH_VERSION.
 fetch "https://curl.se/download/curl-$CURL_VERSION.tar.xz" $CURL_SHA256 curl.tar.xz
 
 if [ "$(uname)" = Linux ]; then
-  rm -rf "$WORK/build-linux" && mkdir -p "$WORK/build-linux" && cd "$WORK/build-linux"
+  PREFIX=/opt/cssh
+  rm -rf "$WORK/build-linux" "$PREFIX" && mkdir -p "$WORK/build-linux" && cd "$WORK/build-linux"
+  STATIC=(-DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON)
   tar xJf "$WORK/src/libssh.tar.xz"
-  cmake -S libssh-$LIBSSH_VERSION -B libssh-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+  cmake -S libssh-$LIBSSH_VERSION -B libssh-build -G Ninja -DCMAKE_BUILD_TYPE=Release "${STATIC[@]}" \
     -DWITH_EXAMPLES=OFF -DUNIT_TESTING=OFF -DCLIENT_TESTING=OFF -DWITH_SERVER=OFF -DWITH_GSSAPI=OFF >/dev/null
   cmake --build libssh-build >/dev/null && cmake --install libssh-build >/dev/null
   tar xJf "$WORK/src/curl.tar.xz"
-  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja "${CURL_OPTIONS[@]}" -DCMAKE_INSTALL_PREFIX=/usr >/dev/null
+  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja "${CURL_OPTIONS[@]}" "${STATIC[@]}" -DBUILD_STATIC_LIBS=ON >/dev/null
   cmake --build curl-build >/dev/null && cmake --install curl-build >/dev/null
-  ldconfig
-  echo "Installed libssh $LIBSSH_VERSION and libcurl $CURL_VERSION to /usr"
+  mkdir -p /usr/lib/pkgconfig
+  cat > /usr/lib/pkgconfig/cssh.pc <<EOF
+Name: cssh
+Description: libssh and libcurl for MacSCP
+Version: $LIBSSH_VERSION
+Cflags: -I$PREFIX/include
+Libs: -L$PREFIX/lib -lssh -lcurl -lssl -lcrypto -lz -lpthread
+EOF
+  echo "Installed static libssh $LIBSSH_VERSION and libcurl $CURL_VERSION to $PREFIX"
   exit 0
 fi
 
