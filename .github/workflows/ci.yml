@@ -57,7 +57,7 @@ jobs:
         run: |
           apt-get update -q
           DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
-            cmake ninja-build libssl-dev libcurl4-openssl-dev zlib1g-dev curl xz-utils ca-certificates openssl \
+            cmake ninja-build libssl-dev zlib1g-dev curl xz-utils ca-certificates openssl \
             openssh-server openssh-client dropbear-bin netcat-openbsd gdb python3-pyftpdlib python3-openssl
       - name: Build libssh
         run: scripts/build-cssh.sh
@@ -88,7 +88,7 @@ jobs:
             swift:6.2-noble bash -c '
               apt-get update -q >/dev/null &&
               DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends cmake ninja-build libssl-dev \
-                libcurl4-openssl-dev zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
+                zlib1g-dev curl xz-utils ca-certificates openssh-client gdb >/dev/null &&
               scripts/build-cssh.sh && scripts/ci-run-tests.sh --filter IntegrationTests'
       - name: Server logs
         if: failure()

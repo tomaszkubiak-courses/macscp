@@ -21,6 +21,17 @@ fetch() {
   echo "$2  $3" | { command -v sha256sum >/dev/null && sha256sum -c - || shasum -a 256 -c -; } >/dev/null || { echo "checksum mismatch: $3" >&2; rm -f "$3"; exit 1; }
 }
 
+CURL_OPTIONS=(
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF
+  -DBUILD_LIBCURL_DOCS=OFF -DBUILD_MISC_DOCS=OFF -DENABLE_CURL_MANUAL=OFF -DCURL_USE_PKGCONFIG=OFF
+  -DCURL_USE_OPENSSL=ON -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_GSSAPI=OFF
+  -DUSE_NGHTTP2=OFF -DUSE_LIBIDN2=OFF -DUSE_APPLE_IDN=OFF -DCURL_BROTLI=OFF -DCURL_ZSTD=OFF -DCURL_ZLIB=OFF
+  -DCURL_DISABLE_HTTP=ON -DCURL_DISABLE_DICT=ON -DCURL_DISABLE_FILE=ON -DCURL_DISABLE_GOPHER=ON
+  -DCURL_DISABLE_IMAP=ON -DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_LDAPS=ON -DCURL_DISABLE_MQTT=ON
+  -DCURL_DISABLE_POP3=ON -DCURL_DISABLE_RTSP=ON -DCURL_DISABLE_SMTP=ON
+  -DCURL_DISABLE_TELNET=ON -DCURL_DISABLE_TFTP=ON -DCURL_DISABLE_IPFS=ON -DCURL_DISABLE_WEBSOCKETS=ON
+)
+
 mkdir -p "$WORK/src"
 cd "$WORK/src"
 fetch "https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz" $OPENSSL_SHA256 openssl.tar.gz
@@ -33,8 +44,11 @@ if [ "$(uname)" = Linux ]; then
   cmake -S libssh-$LIBSSH_VERSION -B libssh-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
     -DWITH_EXAMPLES=OFF -DUNIT_TESTING=OFF -DCLIENT_TESTING=OFF -DWITH_SERVER=OFF -DWITH_GSSAPI=OFF >/dev/null
   cmake --build libssh-build >/dev/null && cmake --install libssh-build >/dev/null
+  tar xJf "$WORK/src/curl.tar.xz"
+  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja "${CURL_OPTIONS[@]}" -DCMAKE_INSTALL_PREFIX=/usr >/dev/null
+  cmake --build curl-build >/dev/null && cmake --install curl-build >/dev/null
   ldconfig
-  echo "Installed libssh $LIBSSH_VERSION to /usr"
+  echo "Installed libssh $LIBSSH_VERSION and libcurl $CURL_VERSION to /usr"
   exit 0
 fi
 
@@ -58,17 +72,10 @@ for arch in "${ARCHS[@]}"; do
   cmake --build libssh-build >/dev/null && cmake --install libssh-build >/dev/null
 
   tar xJf "$WORK/src/curl.tar.xz"
-  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=$arch -DCMAKE_OSX_DEPLOYMENT_TARGET=$MIN_MACOS \
+  cmake -S curl-$CURL_VERSION -B curl-build -G Ninja "${CURL_OPTIONS[@]}" \
+    -DCMAKE_OSX_ARCHITECTURES=$arch -DCMAKE_OSX_DEPLOYMENT_TARGET=$MIN_MACOS \
     -DCMAKE_INSTALL_PREFIX="$prefix" -DOPENSSL_ROOT_DIR="$prefix" -DOPENSSL_USE_STATIC_LIBS=ON \
-    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF \
-    -DBUILD_LIBCURL_DOCS=OFF -DBUILD_MISC_DOCS=OFF -DENABLE_CURL_MANUAL=OFF -DCURL_USE_PKGCONFIG=OFF \
-    -DCURL_USE_OPENSSL=ON -DCURL_USE_LIBPSL=OFF -DCURL_USE_LIBSSH2=OFF -DCURL_USE_LIBSSH=OFF -DCURL_USE_GSSAPI=OFF \
-    -DUSE_NGHTTP2=OFF -DUSE_LIBIDN2=OFF -DUSE_APPLE_IDN=OFF -DCURL_BROTLI=OFF -DCURL_ZSTD=OFF -DCURL_ZLIB=OFF \
-    -DCURL_DISABLE_HTTP=ON -DCURL_DISABLE_DICT=ON -DCURL_DISABLE_FILE=ON -DCURL_DISABLE_GOPHER=ON \
-    -DCURL_DISABLE_IMAP=ON -DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_LDAPS=ON -DCURL_DISABLE_MQTT=ON \
-    -DCURL_DISABLE_POP3=ON -DCURL_DISABLE_RTSP=ON -DCURL_DISABLE_SMTP=ON \
-    -DCURL_DISABLE_TELNET=ON -DCURL_DISABLE_TFTP=ON -DCURL_DISABLE_IPFS=ON -DCURL_DISABLE_WEBSOCKETS=ON >/dev/null
+    -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON >/dev/null
   cmake --build curl-build >/dev/null && cmake --install curl-build >/dev/null
 
   libtool -static -no_warning_for_no_symbols -o "$prefix/lib/libcssh.a" \
