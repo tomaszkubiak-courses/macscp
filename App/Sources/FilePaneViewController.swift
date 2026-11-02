@@ -130,6 +130,7 @@ final class FilePaneViewController: NSViewController, NSMenuItemValidation {
             (String(localized: "Open"), #selector(openSelection(_:))),
             (String(localized: "Edit"), #selector(editSelection(_:))),
             (String(localized: "Edit With…"), #selector(editSelectionWith(_:))),
+            (String(localized: "Edit in MacSCP"), #selector(editSelectionInternally(_:))),
             (isRemote ? String(localized: "Download…") : String(localized: "Upload…"), #selector(transferSelection(_:))),
             (String(localized: "Rename…"), #selector(renameSelection(_:))),
             (isRemote ? String(localized: "Delete") : String(localized: "Move to Trash"), #selector(deleteSelection(_:))),
@@ -293,6 +294,12 @@ final class FilePaneViewController: NSViewController, NSMenuItemValidation {
         }
     }
 
+    @objc func editSelectionInternally(_ sender: Any?) {
+        let files = targetItems.filter { !$0.isDirectory }
+        guard isRemote, !files.isEmpty else { return }
+        commander?.edit(files.map(fullPath), with: nil, builtIn: true)
+    }
+
     @objc func editSelectionWith(_ sender: Any?) {
         let files = targetItems.filter { !$0.isDirectory }
         guard !files.isEmpty else { return }
@@ -391,6 +398,7 @@ final class FilePaneViewController: NSViewController, NSMenuItemValidation {
         case #selector(openSelection(_:)), #selector(transferSelection(_:)), #selector(renameSelection(_:)),
              #selector(deleteSelection(_:)), #selector(getInfo(_:)):
             return !targetItems.isEmpty
+        case #selector(editSelectionInternally(_:)): return isRemote && targetItems.contains { !$0.isDirectory }
         case #selector(editSelection(_:)), #selector(editSelectionWith(_:)):
             return targetItems.contains { !$0.isDirectory }
         default: return true

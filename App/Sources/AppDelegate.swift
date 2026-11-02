@@ -57,6 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 open(session, transferDelegate: delegate)
                 NSApp.activate()
                 if let edit = d.string(forKey: "MacSCPDebugEdit") { commanders.last?.edit([edit], with: nil) }
+                if let text = d.string(forKey: "MacSCPDebugEditInsert") {
+                    try? await Task.sleep(for: .seconds(2))
+                    commanders.last?.debugEditorInsert(text)
+                }
                 if d.bool(forKey: "MacSCPDebugKeep") {
                     try? await Task.sleep(for: .seconds(2))
                     commanders.last?.keepRemoteUpToDate(nil)

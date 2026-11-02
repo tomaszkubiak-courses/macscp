@@ -237,6 +237,9 @@
     "Done" : {
 
     },
+    "Don’t Save" : {
+
+    },
     "Double-click to type a path" : {
 
     },
@@ -259,6 +262,9 @@
 
     },
     "Edit With…" : {
+
+    },
+    "Edit in MacSCP" : {
 
     },
     "Edited Files" : {
@@ -312,6 +318,18 @@
     "Find Files…" : {
 
     },
+    "Find Next" : {
+
+    },
+    "Find Previous" : {
+
+    },
+    "Find and Replace…" : {
+
+    },
+    "Find…" : {
+
+    },
     "Folder" : {
 
     },
@@ -342,7 +360,13 @@
     "Go to Folder…" : {
 
     },
+    "Go to Line…" : {
+
+    },
     "Go to folder" : {
+
+    },
+    "Go to line" : {
 
     },
     "Group" : {
@@ -383,6 +407,19 @@
     },
     "Keep Server Version" : {
 
+    },
+    "Large files can make the editor slow." : {
+
+    },
+    "Line %lld, Column %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Line %1$lld, Column %2$lld"
+          }
+        }
+      }
     },
     "Local directory" : {
 
@@ -620,7 +657,16 @@
     "Save Site" : {
 
     },
+    "Save as UTF-8" : {
+
+    },
+    "Save changes to “%@” before closing?" : {
+
+    },
     "Save password in Keychain" : {
+
+    },
+    "Saved changes are uploaded to the server." : {
 
     },
     "Search in" : {
@@ -686,6 +732,9 @@
     "Skipped, because MacSCP does not support their protocol yet: %@." : {
 
     },
+    "Some characters do not exist in that encoding. Save the file as UTF-8 instead?" : {
+
+    },
     "Source" : {
 
     },
@@ -743,6 +792,9 @@
     "TLS/SSL Implicit encryption" : {
 
     },
+    "Text of %@" : {
+
+    },
     "The %@ key of %@:%@ does not match the one in your known hosts. Someone may be intercepting the connection, or the server was reinstalled. New fingerprint:\n\n%@" : {
       "localizations" : {
         "en" : {
@@ -781,6 +833,9 @@
           }
         }
       }
+    },
+    "The text cannot be saved as %@." : {
+
     },
     "These sites used private keys at Windows paths: %@. Copy the key files to this Mac, then choose them under Advanced. PuTTY .ppk keys work as they are." : {
 
@@ -839,6 +894,9 @@
     "Upload…" : {
 
     },
+    "Use Files › Edit With… to open it in another app." : {
+
+    },
     "Use ssh-agent" : {
 
     },
@@ -867,6 +925,9 @@
 
     },
     "Window" : {
+
+    },
+    "Wrap Lines" : {
 
     },
     "X" : {
@@ -909,6 +970,19 @@
 
     },
     "“%@” has changes not on the server." : {
+
+    },
+    "“%@” is %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” is %2$@."
+          }
+        }
+      }
+    },
+    "“%@” is not a text file." : {
 
     }
   },

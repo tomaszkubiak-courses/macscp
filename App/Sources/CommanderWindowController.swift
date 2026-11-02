@@ -103,7 +103,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     }
 
     var hasActiveWork: Bool {
-        queueItems.contains { $0.state == .queued || $0.state == .running } || edits.hasPendingUploads
+        queueItems.contains { $0.state == .queued || $0.state == .running } || edits.hasPendingUploads || edits.hasUnsavedEditors
             || syncModel?.isBusy == true
     }
 
@@ -208,7 +208,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
             : String(localized: "\(running) transfers in progress")
     }
 
-    func edit(_ paths: [String], with app: URL?) { edits.edit(paths, with: app) }
+    func edit(_ paths: [String], with app: URL?, builtIn: Bool = false) { edits.edit(paths, with: app, builtIn: builtIn) }
 
     private var syncModel: SyncModel?
     private var keepUpToDate: KeepUpToDateWindowController?
@@ -272,6 +272,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
     #if DEBUG
     func debugCompare() { syncModel?.compare() }
     func debugStartKeep() { keepUpToDate?.model.start() }
+    func debugEditorInsert(_ text: String) { edits.debugInsertAndSave(text) }
     func debugFind(_ mask: String) {
         findFiles?.model.mask = mask
         findFiles?.model.start()
@@ -329,6 +330,7 @@ final class CommanderWindowController: NSWindowController, NSWindowDelegate, NSM
         findFiles = nil
         let s = session
         let e = edits!
+        e.closeEditors()
         Task {
             await e.stopAll()
             await s.close()

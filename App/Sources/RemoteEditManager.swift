@@ -6,14 +6,17 @@ import SwiftUI
 @Observable
 final class RemoteEditManager {
     static let editorsKey = "editorsByExtension"
-    static let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
 
     private(set) var files: [EditedFile] = []
     @ObservationIgnored private var editor: RemoteEditor!
     @ObservationIgnored weak var window: NSWindow?
     @ObservationIgnored private var reportedFailures: Set<UUID> = []
+    @ObservationIgnored private var editors: [URL: TextEditorWindowController] = [:]
+    @ObservationIgnored private var closedEditors: Set<URL> = []
+    @ObservationIgnored private let host: String
 
     init(session: Session, id: String) {
+        host = session.site.host
         let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("MacSCP/edit/\(id)")
         editor = RemoteEditor(
@@ -24,12 +27,18 @@ final class RemoteEditManager {
 
     var hasPendingUploads: Bool { files.contains { $0.state == .pending || $0.state == .uploading } }
 
-    func edit(_ paths: [String], with app: URL?) {
+    var hasUnsavedEditors: Bool { editors.values.contains { $0.window?.isDocumentEdited == true } }
+
+    func edit(_ paths: [String], with app: URL?, builtIn: Bool = false) {
         var editors = UserDefaults.standard.dictionary(forKey: Self.editorsKey) as? [String: String] ?? [:]
         for path in paths {
             let ext = (path as NSString).pathExtension.lowercased()
             if let app { editors[ext] = app.path }
-            let chosen = app ?? editors[ext].map { URL(fileURLWithPath: $0) } ?? Self.textEdit
+            if builtIn { editors[ext] = nil }
+            guard let chosen = app ?? editors[ext].map({ URL(fileURLWithPath: $0) }) else {
+                Task { await openInternal(path) }
+                continue
+            }
             Task {
                 do {
                     let local = try await editor.open(path)
@@ -44,7 +53,61 @@ final class RemoteEditManager {
         UserDefaults.standard.set(editors, forKey: Self.editorsKey)
     }
 
+    private func openInternal(_ path: String) async {
+        do {
+            let local = try await editor.open(path)
+            if let open = editors[local] { return open.showWindow(nil) }
+            let data = try Data(contentsOf: local)
+            guard let file = TextFile.decode(data) else {
+                await stopTracking(local)
+                let a = NSAlert()
+                a.messageText = String(localized: "“\((path as NSString).lastPathComponent)” is not a text file.")
+                a.informativeText = String(localized: "Use Files › Edit With… to open it in another app.")
+                _ = await Alerts.serialized { [window] in await Alerts.run(a, in: window) }
+                return
+            }
+            if data.count > 20 << 20, !(await Alerts.confirm(
+                String(localized: "“\((path as NSString).lastPathComponent)” is \(Format.size(Int64(data.count))).") ,
+                info: String(localized: "Large files can make the editor slow."), action: String(localized: "Open"), in: window)) {
+                await stopTracking(local)
+                return
+            }
+            let controller = TextEditorWindowController(localURL: local, remotePath: path, file: file, host: host)
+            controller.onClose = { [weak self] in self?.editorClosed(local) }
+            editors[local] = controller
+            closedEditors.remove(local)
+            if let f = files.first(where: { $0.localURL == local }) { controller.setUploadStatus(f.statusText) }
+            controller.showWindow(nil)
+        } catch {
+            await Alerts.error(error, in: window)
+        }
+    }
+
+    private func stopTracking(_ local: URL) async {
+        if let id = await editor.files.first(where: { $0.localURL == local })?.id { await editor.stop(id) }
+    }
+
+    private func editorClosed(_ local: URL) {
+        editors[local] = nil
+        if let f = files.first(where: { $0.localURL == local }), f.state == .synced {
+            stop(f.id)
+        } else {
+            closedEditors.insert(local)
+        }
+    }
+
+    func closeEditors() {
+        for e in editors.values {
+            e.window?.isDocumentEdited = false
+            e.close()
+        }
+    }
+
     func stop(_ id: UUID) { Task { await editor.stop(id) } }
+
+    #if DEBUG
+    func debugInsertAndSave(_ text: String) { editors.values.first?.debugInsertAndSave(text) }
+    #endif
 
     func confirmStop(_ f: EditedFile) {
         guard f.state != .synced else { return stop(f.id) }
@@ -62,6 +125,11 @@ final class RemoteEditManager {
     private func changed(_ new: [EditedFile]) {
         files = new
         for f in new {
+            editors[f.localURL]?.setUploadStatus(f.statusText)
+            if f.state == .synced, closedEditors.contains(f.localURL) {
+                closedEditors.remove(f.localURL)
+                stop(f.id)
+            }
             if case .failed(let m) = f.state, !reportedFailures.contains(f.id) {
                 reportedFailures.insert(f.id)
                 Task { await Alerts.error(RemoteError(.failure, "Upload of \(f.remotePath) failed: \(m)"), in: window) }
@@ -102,7 +170,7 @@ struct EditedFilesView: View {
                             Text(f.remotePath).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(status(f)).font(.caption).foregroundStyle(color(f))
+                        Text(f.statusText).font(.caption).foregroundStyle(color(f))
                         if case .failed = f.state { Button("Retry") { manager.retry(f.id) } }
                         if f.state == .conflict { Button("Upload Anyway") { manager.retry(f.id) } }
                         Button("Stop") { manager.confirmStop(f) }.help("Stop tracking and delete the local copy")
@@ -116,22 +184,24 @@ struct EditedFilesView: View {
         .frame(width: 520)
     }
 
-    private func status(_ f: EditedFile) -> String {
-        switch f.state {
-        case .synced: f.lastUpload.map { String(localized: "Uploaded \($0.formatted(date: .omitted, time: .shortened))") }
-            ?? String(localized: "Opened")
-        case .pending: String(localized: "Changed")
-        case .uploading: String(localized: "Uploading…")
-        case .conflict: String(localized: "Server version kept")
-        case .failed: String(localized: "Upload failed")
-        }
-    }
-
     private func color(_ f: EditedFile) -> Color {
         switch f.state {
         case .failed, .conflict: .red
         case .pending, .uploading: .orange
         default: .secondary
+        }
+    }
+}
+
+extension EditedFile {
+    var statusText: String {
+        switch state {
+        case .synced: lastUpload.map { String(localized: "Uploaded \($0.formatted(date: .omitted, time: .shortened))") }
+            ?? String(localized: "Opened")
+        case .pending: String(localized: "Changed")
+        case .uploading: String(localized: "Uploading…")
+        case .conflict: String(localized: "Server version kept")
+        case .failed: String(localized: "Upload failed")
         }
     }
 }

@@ -26,8 +26,9 @@ enum MainMenu {
             item(String(localized: "Synchronize…"), #selector(CommanderWindowController.synchronize(_:)), "s", [.command, .shift]),
             item(String(localized: "Keep Remote Folder Up to Date…"), #selector(CommanderWindowController.keepRemoteUpToDate(_:)), "u", [.command, .shift]),
             item(String(localized: "Compare Directories"), #selector(CommanderWindowController.compareDirectories(_:)), "c", [.command, .shift]),
-            item(String(localized: "Find Files…"), #selector(CommanderWindowController.findFiles(_:)), "f"),
+            item(String(localized: "Find Files…"), #selector(CommanderWindowController.findFiles(_:)), "f", [.command, .shift]),
             .separator(),
+            item(String(localized: "Save"), #selector(TextEditorWindowController.saveDocument(_:)), "s"),
             item(String(localized: "Close"), #selector(NSWindow.performClose(_:)), "w"),
         ]))
 
@@ -39,12 +40,21 @@ enum MainMenu {
             item(String(localized: "Copy"), #selector(NSText.copy(_:)), "c"),
             item(String(localized: "Paste"), #selector(NSText.paste(_:)), "v"),
             item(String(localized: "Select All"), #selector(NSText.selectAll(_:)), "a"),
+            .separator(),
+            submenu(String(localized: "Find"), [
+                finder(String(localized: "Find…"), .showFindInterface, "f"),
+                finder(String(localized: "Find and Replace…"), .showReplaceInterface, "f", [.command, .option]),
+                finder(String(localized: "Find Next"), .nextMatch, "g"),
+                finder(String(localized: "Find Previous"), .previousMatch, "g", [.command, .shift]),
+            ]),
+            item(String(localized: "Go to Line…"), #selector(TextEditorWindowController.goToLine(_:)), "l"),
         ]))
 
         main.addItem(submenu(String(localized: "Files"), [
             item(String(localized: "Open"), #selector(FilePaneViewController.openSelection(_:)), String(Character(UnicodeScalar(NSDownArrowFunctionKey)!))),
             item(String(localized: "Edit"), #selector(FilePaneViewController.editSelection(_:)), "e"),
             item(String(localized: "Edit With…"), #selector(FilePaneViewController.editSelectionWith(_:)), "e", [.command, .option]),
+            item(String(localized: "Edit in MacSCP"), #selector(FilePaneViewController.editSelectionInternally(_:)), "e", [.command, .control]),
             .separator(),
             item(String(localized: "Copy to Other Pane…"), #selector(FilePaneViewController.transferSelection(_:)), "k"),
             item(String(localized: "Rename…"), #selector(FilePaneViewController.renameSelection(_:)), "r", [.command, .shift]),
@@ -59,6 +69,7 @@ enum MainMenu {
             item(String(localized: "Show Hidden Files"), #selector(CommanderWindowController.toggleHiddenFiles(_:)), ".", [.command, .shift]),
             item(String(localized: "Show Queue"), #selector(CommanderWindowController.toggleQueue(_:)), "q", [.command, .option]),
             item(String(localized: "Refresh"), #selector(FilePaneViewController.refresh(_:)), "r"),
+            item(String(localized: "Wrap Lines"), #selector(TextEditorWindowController.toggleWrap(_:)), "w", [.command, .option]),
             .separator(),
             item(String(localized: "Enter Full Screen"), #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]),
         ]))
@@ -101,6 +112,13 @@ enum MainMenu {
         items.forEach(menu.addItem)
         item.submenu = menu
         return item
+    }
+
+    private static func finder(_ title: String, _ action: NSTextFinder.Action, _ key: String,
+                               _ mods: NSEvent.ModifierFlags = .command) -> NSMenuItem {
+        let i = item(title, #selector(NSTextView.performTextFinderAction(_:)), key, mods)
+        i.tag = action.rawValue
+        return i
     }
 
     private static func item(_ title: String, _ action: Selector, _ key: String = "",
