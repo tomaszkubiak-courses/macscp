@@ -54,7 +54,7 @@ MacSCP brings WinSCP's way of working to the Mac: local files on the left, the s
 
 ## Requirements
 
-macOS 14 Sonoma or later, on Apple silicon or Intel.
+macOS 14 Sonoma or later, on Apple silicon or Intel. MacSCP is available in English, Polish, German, French and Spanish.
 
 ## Installation
 
@@ -151,7 +151,7 @@ CI runs the integration suite against:
 
 ## Roadmap
 
-- **Next:** translations.
+- **Next:** getting ready for 1.0: testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass. More languages are welcome.
 - **1.0** follows after testing with more servers and storage providers, a week of daily use, and a full VoiceOver pass.
 
 ## Relationship to WinSCP

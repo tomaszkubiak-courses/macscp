@@ -33,7 +33,7 @@ enum MainMenu {
             item(String(localized: "Close"), #selector(NSWindow.performClose(_:)), "w"),
         ]))
 
-        main.addItem(submenu(String(localized: "Edit"), [
+        main.addItem(submenu(String(localized: "menu.edit", defaultValue: "Edit"), [
             item(String(localized: "Undo"), Selector(("undo:")), "z"),
             item(String(localized: "Redo"), Selector(("redo:")), "z", [.command, .shift]),
             .separator(),
